@@ -1,0 +1,3 @@
+#!/bin/bash
+cp dumpcap /home/chenxu/mount/tftproot/
+

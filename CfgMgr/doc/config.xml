@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Config>
+	<Lan1>
+		<Lan1_Auto>false</Lan1_Auto>
+		<Lan1_IP>192.168.1.30</Lan1_IP>
+		<Lan1_Mask>255.255.255.0</Lan1_Mask>
+		<Lan1_GateWay>192.168.1.1</Lan1_GateWay>
+		<Lan1_Mac>11-22-33-44-55-66</Lan1_Mac>
+		<Lan1_CaptureServiceStatus>ON</Lan1_CaptureServiceStatus>
+		<Lan1_AutoUpLoadEnable>N</Lan1_AutoUpLoadEnable>
+		<Lan1_AutoUpLoadPath>null</Lan1_AutoUpLoadPath>
+		<Lan1_NetFilterServiceStatus>ON</Lan1_NetFilterServiceStatus>
+	</Lan1>
+	<Lan2>
+		<Lan2_Auto>false</Lan2_Auto>
+		<Lan2_IP>192.168.1.30</Lan2_IP>
+		<Lan2_Mask>255.255.255.0</Lan2_Mask>
+		<Lan2_GateWay>192.168.1.1</Lan2_GateWay>
+		<Lan2_Mac>11-22-33-44-55-66</Lan2_Mac>
+		<Lan2_CaptureServiceStatus>ON</Lan2_CaptureServiceStatus>
+		<Lan2_AutoUpLoadEnable>N</Lan2_AutoUpLoadEnable>
+		<Lan2_AutoUpLoadPath>null</Lan2_AutoUpLoadPath>
+		<Lan2_NetFilterServiceStatus>ON</Lan2_NetFilterServiceStatus>
+	</Lan2>
+	<User>
+		<Administrators>
+			<UserName>admin</UserName>
+			<UserPws>admin</UserPws>
+		</Administrators>
+		<NomalUser>
+			<UserName>user</UserName>
+			<UserPws>user</UserPws>
+		</NomalUser>
+	</User>
+</Config>
