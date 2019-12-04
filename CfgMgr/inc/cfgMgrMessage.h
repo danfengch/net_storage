@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @par Copyright (c): ChengDu BinHong Science & Technology Co.,ltd
-  * @file     cfgMgrMessage.h
+  * @file     message.h
   * @author   Chenxu
   * @version  V1.0.0
   * @date     2019/09/25
@@ -196,7 +196,7 @@ typedef struct
 
 typedef struct
 {
-    logType logType;
+    logType lgType;
     logSignificance logSignificance;
     time_t startTime;
     time_t endTime;
@@ -215,7 +215,7 @@ typedef struct
 
 typedef struct
 {
-    logType logType;
+    logType lgType;
     logSignificance logSignificance;
     time_t startTime;
     time_t endTime;

@@ -29,6 +29,8 @@
 #define LOG_LOCK 	    		pthread_mutex_lock(&logMutex)
 #define LOG_UNLOCK  			pthread_mutex_unlock(&logMutex)
 
+#define DEBUG_LEVEL             DEBUG_INFO
+
 
 static pthread_mutex_t logMutex;
 static char lastCfgMgrErr[LOG_BUF_LEN_MAX + 1] = {0};
@@ -258,7 +260,6 @@ void trace(int logLevel, int typ, const char *fmt, ...)
     va_list ap;
     logSignificance sgnfcc;
 
-
     va_start(ap, fmt);
     vsnprintf(lastCfgMgrErr, LOG_BUF_LEN_MAX, fmt, ap);
     va_end(ap);
@@ -266,12 +267,15 @@ void trace(int logLevel, int typ, const char *fmt, ...)
     printf(lastCfgMgrErr);
     printf("\n");
 
-    if (logLevel <= DEBUG_ERR)
-        sgnfcc = LOGSIGNIFICANCE_KEY;
-    else
-        sgnfcc = LOGSIGNIFICANCE_GENERAL;
-    
-    logWrite(typ, sgnfcc, lastCfgMgrErr);
+    if (logLevel <= DEBUG_LEVEL)
+    {
+        if (logLevel <= DEBUG_ERR)
+            sgnfcc = LOGSIGNIFICANCE_KEY;
+        else
+            sgnfcc = LOGSIGNIFICANCE_GENERAL;
+        
+        logWrite(typ, sgnfcc, lastCfgMgrErr);
+    }
 }
 
 const char *getLastCfgMgrErr(void)

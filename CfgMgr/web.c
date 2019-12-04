@@ -15,6 +15,7 @@
  */
 #include <config.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <parameters.h>
@@ -33,12 +34,16 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <message.h>
+#include <cfgMgrMessage.h>
 #include <assert.h>
 #include <mxml.h>
 #include <version.h>
 #include <share.h>
-//#include <cfgmgrDumpcapMessage.h>
+#include <aid.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <fpgaRemoteUpdate.h>
+
 
 #define ETHER_ADDR_LEN    6
 #define UP    1
@@ -53,13 +58,17 @@
 
 
 #define WEB_THREAD_NAME "CfgMgrWebThread"
-#define CONFIG_FILE_NAME "../cfg/config.xml"
+
 
 pthread_t webThreadId = -1;
 
 static param pa;
-static msgID cfgmgrDumpcapMsgId0;
-static msgID cfgmgrDumpcapMsgId1;
+static msgID cfgmgr2CgiMsgId;
+static msgID cgi2CfgmgrMsgId;
+static msgID cfgmgr2DumpcapMsgId0;
+static msgID cfgmgr2DumpcapMsgId1;
+static msgID dumpcap2CfgmgrMsgId0;
+static msgID dumpcap2CfgmgrMsgId1;
 
 
 static cfgMgrStatus paramLoad(param *p)
@@ -153,6 +162,7 @@ static cfgMgrStatus paramLoad(param *p)
 		else
 			p->lan1.capture.isCapture = FALSE;
         trace(DEBUG_INFO, SYSTEM, "Lan1_CaptureServiceStatus %s", p->lan1.capture.isCapture ? "true":"false");
+        
 		/** Lan1_AutoUpLoadEnable */
 		Lan1_AutoUpLoadEnable = mxmlFindElement(Lan1, Lan1, (const char *)"Lan1_AutoUpLoadEnable", NULL, NULL, MXML_DESCEND);
 		assert(Lan1_AutoUpLoadEnable);
@@ -161,10 +171,10 @@ static cfgMgrStatus paramLoad(param *p)
 		attr_value = (char * )mxmlGetText(node, &whitespace);
 		assert(attr_value);
 		if(strstr(attr_value, "true"))
-			p->lan1.capture.isCapture = TRUE;
+			p->lan1.capture.isAutoUpLoad = TRUE;
 		else
-			p->lan1.capture.isCapture = FALSE;
-        trace(DEBUG_INFO, SYSTEM, "Lan1_AutoUpLoadEnable %s", p->lan1.capture.isCapture ? "true":"false");
+			p->lan1.capture.isAutoUpLoad = FALSE;
+        trace(DEBUG_INFO, SYSTEM, "Lan1_AutoUpLoadEnable %s", p->lan1.capture.isAutoUpLoad ? "true":"false");
 		/** Lan1_AutoUpLoadPath */
 		Lan1_AutoUpLoadPath = mxmlFindElement(Lan1, Lan1, (const char *)"Lan1_AutoUpLoadPath", NULL, NULL, MXML_DESCEND);
         assert(Lan1_AutoUpLoadPath);        
@@ -261,10 +271,10 @@ static cfgMgrStatus paramLoad(param *p)
 		attr_value = (char * )mxmlGetText(node, &whitespace);
 		assert(attr_value);
 		if(strstr(attr_value, "true"))
-			p->lan2.capture.isCapture = TRUE;
+			p->lan2.capture.isAutoUpLoad = TRUE;
 		else
-			p->lan2.capture.isCapture = FALSE;
-        trace(DEBUG_INFO, SYSTEM, "Lan2_AutoUpLoadEnable %s", p->lan2.capture.isCapture ? "true":"false");
+			p->lan2.capture.isAutoUpLoad = FALSE;
+        trace(DEBUG_INFO, SYSTEM, "Lan2_AutoUpLoadEnable %s", p->lan2.capture.isAutoUpLoad ? "true":"false");
 		/** Lan2_AutoUpLoadPath */
 		Lan2_AutoUpLoadPath = mxmlFindElement(Lan2, Lan2, (const char *)"Lan2_AutoUpLoadPath", NULL, NULL, MXML_DESCEND);
         assert(Lan2_AutoUpLoadPath);        
@@ -656,7 +666,7 @@ static cfgMgrStatus set_gateway( in_addr_t addr, int ethn )
 #endif
 }
 
-int get_mac_addr(char *ifname, char *mac)
+int get_mac_addr(char *ifname, unsigned char *mac)
 {
     int fd, rtn;
     struct ifreq ifr;
@@ -706,6 +716,68 @@ ether_etoa(const unsigned char *e, char *a)
     }
     return a;
 }
+
+typedef struct
+{
+    linkStatus lk;
+    int        speed;
+}linkInfo;
+
+int ethGetLinkInfo(char *ifName, linkInfo * lkinfo)
+{
+    int skfd; 
+    struct ifreq ifr; 
+    struct ethtool_value edata; 
+    struct ethtool_cmd ep;
+    
+    edata.cmd = ETHTOOL_GLINK; 
+    edata.data = 0; 
+    
+    memset(&ifr, 0, sizeof(ifr));
+    strcpy(ifr.ifr_name, ifName); 
+    
+    ifr.ifr_data = (char *) &edata; 
+    
+    if(( skfd = socket( AF_INET, SOCK_DGRAM, 0 )) < 0) 
+    {
+        return -1;
+    }
+    
+    if(ioctl( skfd, SIOCETHTOOL, &ifr ) == -1) 
+    {
+        return -1;
+    }
+    else
+    {
+        lkinfo->lk = (edata.data > 0) ? LINK_UP: LINK_DOWN;
+    }
+
+    if(lkinfo->lk == LINK_DOWN)
+    {
+        lkinfo->speed = 0;
+        goto ethGetLinkInfoExit;
+    }
+    
+    ep.cmd = ETHTOOL_GSET;
+    ifr.ifr_data = (caddr_t)&ep;
+
+    if(ioctl( skfd, SIOCETHTOOL, &ifr ) == -1) 
+    {
+        close(skfd);
+        return -1;
+    }
+    else
+    {
+        lkinfo->speed = ep.speed;
+//        trace(DEBUG_INFO, USER, "link speed : %d", lkinfo->speed);
+    }
+    
+ethGetLinkInfoExit:    
+    close(skfd); 
+    
+    return 0;
+}
+
 
 
 int if_updown(char *ifname, int flag)
@@ -759,7 +831,7 @@ int if_updown(char *ifname, int flag)
     return rtn;
 }
 
-
+#ifdef MAC_CONFIG
 static cfgMgrStatus setMacAddress(int netNumber, unsigned char *mac)
 {
     int fd, rtn;
@@ -796,33 +868,14 @@ static cfgMgrStatus setMacAddress(int netNumber, unsigned char *mac)
     close(fd);
     return CFGMGR_OK;
 }
+#endif
 
 static cfgMgrStatus setNetParameters(netParam *net, int netNumber)
 {
     cfgMgrStatus status = CFGMGR_OK;
-    char buffer[100];
+    unsigned char buffer[100];
     
     /** set ip */
-#if 0
-    char cmd[100];
-    char buffer[100];
-    char *netName;
-    
-    inet_ntop(AF_INET, (void *)&net->ip, buffer, 100);
-    if(netNumber == 1)
-        netName = NET1_NAME;
-    else
-        netName = NET2_NAME;
-
-    snprintf(cmd, sizeof(cmd), "ifconfig %s %s", netName, buffer);
-    system(cmd);
-    snprintf(cmd, sizeof(cmd), "ifconfig %s down", netName);
-    system(cmd);    
-    snprintf(cmd, sizeof(cmd), "ifconfig %s up", netName);
-    system(cmd);
-
-
-#else
     if(CFGMGR_OK != (status = set_addr(net->ip, SIOCSIFADDR, netNumber)))
     {
         trace(DEBUG_ERR, USER, "net%d setNetParameters : set ip failed !!!", netNumber);
@@ -840,8 +893,11 @@ static cfgMgrStatus setNetParameters(netParam *net, int netNumber)
     {
         trace(DEBUG_ERR, USER, "net%d setNetParameters : set gateway failed !!!", netNumber);
         return status;
-    }
+    }    
     get_mac_addr(netNumber == 1 ? NET1_NAME : NET2_NAME, buffer);
+//    trace(DEBUG_ERR, SYSTEM, "current hw address : Mac %02x %02x %02x %02x %02x %02x.", 
+//            buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5]);
+#ifdef MAC_CONFIG
     if (memcmp(buffer, net->mac, 6) != 0)
     {
         if_updown(netNumber == 1 ? NET1_NAME : NET2_NAME, DOWN);
@@ -915,7 +971,13 @@ static cfgMgrStatus doLanTest (msg* in, msg *out, int netNumber)
     netParam *netOrigin;
 
     trace(DEBUG_INFO, USER, "Lan %d test start", netNumber);
-//#if 0
+
+    /** net parameter set bak */
+    if (netNumber == 1)
+        netOrigin = &pa.lan1.net;
+    else
+        netOrigin = &pa.lan2.net;
+
     /** set net parameters */
     if(CFGMGR_OK != (status = setNetParameters(net, netNumber)))
     {
@@ -926,27 +988,16 @@ static cfgMgrStatus doLanTest (msg* in, msg *out, int netNumber)
     /** lan test */
     if (0 != pingTest(req->destIp))
     {
-        struct in_addr destIp;
-        destIp.s_addr = req->destIp;
-        trace(DEBUG_ERR, USER, "Lan %d test : pingTest failed, destIp %s!!!,%x", netNumber, inet_ntoa(destIp), req->destIp);
+        trace(DEBUG_ERR, USER, "Network is unreachable");
         status = CFGMGR_NETWORK_UNREACHABLE;
-    }
-
-	/** net parameter set bak */
-    if (netNumber == 1)
-        netOrigin = &pa.lan1.net;
-    else
-        netOrigin = &pa.lan2.net;
-    if(CFGMGR_OK != (status = setNetParameters(netOrigin, netNumber)))
-    {
-        trace(DEBUG_ERR, USER, "Lan %d test : setNetParameters failed !!!", netNumber);
         goto doLanTestExit;
     }
-//#endif    
+
     trace(DEBUG_INFO, USER, "Lan %d test OK", netNumber);
     
 doLanTestExit:
 
+    setNetParameters(netOrigin, netNumber);
     genConfirmMsg(status, out);
     
     return status;
@@ -973,7 +1024,7 @@ static cfgMgrStatus doNetConfigSave (msg* in, msg *out)
         trace(DEBUG_ERR, USER, "net 2 setNetParameters failed.");
         goto doNetConfigSaveExit;
     }
-    
+
     memcpy (&pa.lan2.net, net, sizeof(netParam));
 
     if(CFGMGR_OK != (status = paramSave(&pa)))
@@ -994,38 +1045,88 @@ doNetConfigSaveExit:
 
 static cfgMgrStatus netCapture(captureParam *capture, int netNumber)
 {
-    //TODO
-    return CFGMGR_NOT_SUPPORT;
+    msg             sendMsg, recvMsg;
+    cfgMgrStatus    status = CFGMGR_ERR;
+    int             len;
+    int             *isCapture;
+    msgID           sendMsgId, recvMsgId;
+
+    sendMsg.type = MSGTYPE_NETCAPTURE_REQUEST;
+    isCapture = (int *)sendMsg.data;
+    *isCapture = capture->isCapture;
+
+    if (netNumber == 1)
+    {
+        sendMsgId = cfgmgr2DumpcapMsgId0;
+        recvMsgId = dumpcap2CfgmgrMsgId0;
+    }
+    else
+    {
+        sendMsgId = cfgmgr2DumpcapMsgId1;
+        recvMsgId = dumpcap2CfgmgrMsgId1;
+    }
+
+//    sendMsgId = cfgmgr2DumpcapMsgId0;
+//    recvMsgId = dumpcap2CfgmgrMsgId0;
+#ifdef NET_CAPTURE
+    if(-1 == msgSend(sendMsgId, &sendMsg))
+    {
+        trace(DEBUG_ERR, SYSTEM, "%s : msgSend failed !!!", __FUNCTION__);
+        goto netCaptureExit;
+    }
+    trace(DEBUG_INFO, USER, "%s : send msg to dumpcap", __FUNCTION__);
+    if((len = msgRecv(recvMsgId, &recvMsg)) <= 0)
+    {
+        trace(DEBUG_ERR, SYSTEM, "%s : net%d msgRecv from dumpcap error !!!", 
+            __FUNCTION__, netNumber);
+        goto netCaptureExit;
+    }
+#endif
+    status = CFGMGR_OK;
+
+netCaptureExit:
+
+    return status;
 }
 
 static cfgMgrStatus doNetCapture(msg *in, msg *out)
 {
     cfgMgrStatus status = CFGMGR_OK;
     captureParam *capture = (captureParam *)in->data;
+    int isChanged = 0;
 
     trace(DEBUG_INFO, USER, "Net Capture start");
 
-//    if(CFGMGR_OK != (status = netCapture(capture, 1)))
-//    {
-//        trace(DEBUG_ERR, "net 1 netCapture failed.");
-//        goto doNetCaptureExit;
-//    }
-    
-    memcpy(&pa.lan1.capture, capture, sizeof(captureParam));
-
-    capture++;
-//    if(CFGMGR_OK != (status = netCapture(capture, 2)))
-//    {
-//        trace(DEBUG_ERR, "net 2 netCapture failed.");
-//        goto doNetCaptureExit;
-//    }
-    
-    memcpy(&pa.lan2.capture, capture, sizeof(captureParam));
-
-    if(CFGMGR_OK != (status = paramSave(&pa)))
+    if (capture->isCapture != pa.lan1.capture.isCapture)
     {
-        trace(DEBUG_ERR, USER, "paramSave failed.");
-        goto doNetCaptureExit;
+        if(CFGMGR_OK != (status = netCapture(capture, 1)))
+        {
+            trace(DEBUG_ERR, USER, "net 1 netCapture failed.");
+            goto doNetCaptureExit;
+        }
+        memcpy(&pa.lan1.capture, capture, sizeof(captureParam));
+        isChanged = TRUE;
+    }
+        
+    capture++;
+    if (capture->isCapture != pa.lan2.capture.isCapture)
+    {
+        if(CFGMGR_OK != (status = netCapture(capture, 2)))
+        {
+            trace(DEBUG_ERR, USER, "net 2 netCapture failed.");
+            goto doNetCaptureExit;
+        }
+        memcpy(&pa.lan2.capture, capture, sizeof(captureParam));
+        isChanged = TRUE;
+    }
+
+    if (isChanged)
+    {
+        if (CFGMGR_OK != (status = paramSave(&pa)))
+        {
+            trace(DEBUG_ERR, USER, "paramSave failed.");
+            goto doNetCaptureExit;
+        }
     }
 
     trace(DEBUG_INFO, USER, "Net Capture succ");
@@ -1036,40 +1137,204 @@ doNetCaptureExit:
     return status;
 }
 
+/*
+1.功能编码
+    Gpio18	Gpio0	Gpio1	Gpio2	说明
+    0	0	0	0	通道0 不更新（给陈伦）
+        0	0	1	通道0 10M
+        0	1	0	通道0 更新（给陈伦）
+        0	1	1	通道0 100M
+        1	0	0	无
+        1	0	1	通道0 1000M
+        1	1	1	打开过滤
+        1	1	0	关闭过滤
+    1	0	0	0	通道1 不更新（给陈伦）
+        0	0	1	通道1  10M
+        0	1	0	通道1 更新（给陈伦）
+        0	1	1	通道1  100M
+        1	0	0	无
+        1	0	1	通道1  1000M
+        1	1	1	打开过滤
+        1	1	0	关闭过滤
+2.使能管脚
+    gpio19 作为使能信号使用，高电平有效
+*/
+static const int opCode[][4] = {
+    {0, 0, 0, 0},
+    {0, 0, 0, 1},
+    {0, 0, 1, 0},
+    {0, 0, 1, 1},
+    {0, 1, 0, 0},
+    {0, 1, 0, 1},
+    {0, 1, 1, 1},
+    {0, 1, 1, 0},
+    {1, 0, 0, 0},
+    {1, 0, 0, 1},
+    {1, 0, 1, 0},
+    {1, 0, 1, 1},
+    {1, 1, 0, 0},
+    {1, 1, 0, 1},
+    {1, 1, 1, 1},
+    {1, 1, 1, 0},
+};
+
+typedef enum
+{
+    OPCODE_NET0_FPGA_UPDATE_OFF = 0,
+    OPCODE_NET0_SPEED_10M,
+    OPCODE_NET0_FPGA_UPDATE_ON,
+    OPCODE_NET0_SPEED_100M,
+    OPCODE_NET0_NONE,
+    OPCODE_NET0_SPEED_1000M,
+    OPCODE_NET0_FILTER_ON,
+    OPCODE_NET0_FILTER_OFF,
+    OPCODE_NET1_FPGA_UPDATE_OFF,
+    OPCODE_NET1_SPEED_10M,
+    OPCODE_NET1_FPGA_UPDATE_ON,
+    OPCODE_NET1_SPEED_100M,
+    OPCODE_NET1_NONE,
+    OPCODE_NET1_SPEED_1000M,
+    OPCODE_NET1_FILTER_ON,
+    OPCODE_NET1_FILTER_OFF
+}fpgaOperateCode;
+
+static void fgpaCtrlInit(void)
+{
+    DIR *dir;
+
+    if (NULL == (dir = opendir("/sys/class/gpio/gpio19")))
+    {
+        system("echo 19 > /sys/class/gpio/export");
+        system("echo \"out\" > /sys/class/gpio/gpio19/direction");    
+    }
+    else
+    {
+        closedir(dir);
+    }
+    system("echo 0 > /sys/class/gpio/gpio19/value");
+
+    if (NULL == (dir = opendir("/sys/class/gpio/gpio0")))
+    {
+        system("echo 0 > /sys/class/gpio/export");
+        system("echo \"out\" > /sys/class/gpio/gpio0/direction");
+    }
+    else
+    {
+        closedir(dir);
+    }
+
+    if (NULL == (dir = opendir("/sys/class/gpio/gpio1")))
+    {
+        system("echo 1 > /sys/class/gpio/export");
+        system("echo \"out\" > /sys/class/gpio/gpio1/direction");
+    }
+    else
+    {
+        closedir(dir);
+    }
+
+    if (NULL == (dir = opendir("/sys/class/gpio/gpio2")))
+    {
+        system("echo 2 > /sys/class/gpio/export");
+        system("echo \"out\" > /sys/class/gpio/gpio2/direction");
+    }
+    else
+    {
+        closedir(dir);
+    }
+
+    if (NULL == (dir = opendir("/sys/class/gpio/gpio18")))
+    {
+        system("echo 18 > /sys/class/gpio/export");
+        system("echo \"out\" > /sys/class/gpio/gpio18/direction");    
+    }
+    else
+    {
+        closedir(dir);
+    }
+}
+
+static void fpgaCtrl (fpgaOperateCode code)
+{
+    char cmd[50];
+    
+    system("echo 0 > /sys/class/gpio/gpio19/value");
+    snprintf(cmd, sizeof(cmd), "echo %d > /sys/class/gpio/gpio18/value", opCode[code][0]);
+    system(cmd);
+    snprintf(cmd, sizeof(cmd), "echo %d > /sys/class/gpio/gpio0/value", opCode[code][1]);
+    system(cmd);
+    snprintf(cmd, sizeof(cmd), "echo %d > /sys/class/gpio/gpio1/value", opCode[code][2]);
+    system(cmd);
+    snprintf(cmd, sizeof(cmd), "echo %d > /sys/class/gpio/gpio2/value", opCode[code][3]);
+    system(cmd);
+    system("echo 1 > /sys/class/gpio/gpio19/value");
+    usleep(1000);
+    system("echo 0 > /sys/class/gpio/gpio19/value");
+}
+
 static cfgMgrStatus netFilter(filterParam *filter, int netNumber)
 {
-    //TODO
-    return CFGMGR_NOT_SUPPORT;
+    cfgMgrStatus     status = CFGMGR_ERR;    
+    fpgaOperateCode  code;
+
+    if ((netNumber == 1) && (filter->isFilter == FALSE))
+        code = OPCODE_NET0_FILTER_OFF;
+    else if ((netNumber == 1) && (filter->isFilter == TRUE))
+        code  = OPCODE_NET0_FILTER_ON;
+    else if ((netNumber == 2) && (filter->isFilter == FALSE))
+        code  = OPCODE_NET1_FILTER_OFF;
+    else if ((netNumber == 2) && (filter->isFilter == TRUE))
+        code  = OPCODE_NET1_FILTER_ON;
+    else
+        goto netFilterExit;
+    
+    fpgaCtrl (code);
+
+    status = CFGMGR_OK;
+
+netFilterExit:
+    return status;
 }
 
 static cfgMgrStatus doNetFilter(msg *in, msg *out)
 {
-    cfgMgrStatus status = CFGMGR_OK;
-    filterParam *filter = (filterParam *)in->data;
+    cfgMgrStatus    status = CFGMGR_OK;
+    filterParam     *filter = (filterParam *)in->data;
+    int             isChanged = FALSE;
 
     trace(DEBUG_INFO, USER, "Net Filter start");
 
-//    if(CFGMGR_OK != (status = netFilter(filter, 1)))
-//    {
-//        trace(DEBUG_ERR, "net 1 netFilter failed.");
-//        goto doNetFilterExit;
-//    }
-    
-    memcpy(&pa.lan1.filter, filter, sizeof(filterParam));
-
-    filter++;
-//    if(CFGMGR_OK != (status = netFilter(filter, 2)))
-//    {
-//        trace(DEBUG_ERR, "net 2 netFilter failed.");
-//        goto doNetFilterExit;
-//    }
-    
-    memcpy(&pa.lan2.filter, filter, sizeof(filterParam));
-
-    if(CFGMGR_OK != (status = paramSave(&pa)))
+    if(filter->isFilter != pa.lan1.filter.isFilter)
     {
-        trace(DEBUG_ERR, USER, "paramSave failed.");
-        goto doNetFilterExit;
+        if(CFGMGR_OK != (status = netFilter(filter, 1)))
+        {
+            trace(DEBUG_ERR, SYSTEM, "net 1 netFilter failed.");
+            goto doNetFilterExit;
+        }
+        memcpy(&pa.lan1.filter, filter, sizeof(filterParam));
+        isChanged = TRUE;
+    }
+    
+    filter++;
+
+    if(filter->isFilter != pa.lan2.filter.isFilter)
+    {
+        if(CFGMGR_OK != (status = netFilter(filter, 2)))
+        {
+            trace(DEBUG_ERR, SYSTEM, "net 2 netFilter failed.");
+            goto doNetFilterExit;
+        } 
+        memcpy(&pa.lan2.filter, filter, sizeof(filterParam));
+        isChanged = TRUE;
+    }
+
+    if(isChanged)
+    {
+        if(CFGMGR_OK != (status = paramSave(&pa)))
+        {
+            trace(DEBUG_ERR, USER, "paramSave failed.");
+            goto doNetFilterExit;
+        }
     }
 
     trace(DEBUG_INFO, USER, "Net Filter succ");
@@ -1082,57 +1347,46 @@ doNetFilterExit:
 
 static cfgMgrStatus doFileLookUp(msg *in, msg *out)
 {
-    cfgMgrStatus status = CFGMGR_OK;
-    fileLookUpRequest *req = (fileLookUpRequest *)in->data;
-    fileLookUpResponse * resp = (fileLookUpResponse *)out->data;
-    int recordsTotal, i, len;
-    msgID mId;
-    msg *sendMsg = in, *recvMsg = out;
+    cfgMgrStatus       status = CFGMGR_OK;
+    fileLookUpRequest  *req = (fileLookUpRequest *)in->data;
+    int                len;
+    msgID              sendMsgId, recvMsgId;
+    msg                *sendMsg = in, *recvMsg = out;
 
     trace(DEBUG_INFO, USER, "File Look Up start");
 
     memset(out, 0, sizeof(msg));
 
     /** file look up */
-#if 1
     if (req->netNumber == 1)
     {
-        mId = cfgmgrDumpcapMsgId0;
+        sendMsgId = cfgmgr2DumpcapMsgId0;
+        recvMsgId = dumpcap2CfgmgrMsgId0;
     }
     else
     {
-        mId = cfgmgrDumpcapMsgId1;
+        sendMsgId = cfgmgr2DumpcapMsgId1;
+        recvMsgId = dumpcap2CfgmgrMsgId1;
     }
-    
-    if(-1 == msgSend(mId, sendMsg))
-    {
-        trace(DEBUG_ERR, SYSTEM, "msgSend failed !!!");
-        goto doNetFilterExit;
-    }
-    if((len = msgRecv(mId, recvMsg)) <= 0)
-    {
-        trace(DEBUG_ERR, SYSTEM, "msgRecv %s error !!!", req->netNumber == 1 ? CFGMGR_DUMPCAP_MSG0_NAME : CFGMGR_DUMPCAP_MSG1_NAME);
-        goto doNetFilterExit;
-    }
-#else
-{
-    time_t ti;
-    char timeFmt[30];
 
-    recordsTotal = 1000;
-    for (i = 0, ti = req->startTime + req->start; (i < recordsTotal) && (i < req->length); i++, ti++)
+//    sendMsgId = cfgmgr2DumpcapMsgId0;
+//    recvMsgId = dumpcap2CfgmgrMsgId0;
+
+    if(-1 == msgSend(sendMsgId, sendMsg))
     {
-        time2format1(ti, timeFmt);
-        snprintf(resp->elements[i].fileName, sizeof(resp->elements[i].fileName), "%s", timeFmt);
-        resp->elements[i].modifyTime = ti;
-        resp->elements[i].sizeMB = 10;
+        trace(DEBUG_ERR, SYSTEM, "%s : net%d msgSend failed !!!", __FUNCTION__, req->netNumber);
+        goto doNetFilterExit;
     }
-    resp->draw = req->draw;
-    resp->recordsTotal = recordsTotal;
-    resp->length= i;
-}
-    out->type = MSGTYPE_FILELOOKUP_RESPONSE;
-#endif
+    trace(DEBUG_INFO, USER, "send msg to dumpcap");
+    if((len = msgRecv(recvMsgId, recvMsg)) <= 0)
+    {
+        trace(DEBUG_ERR, SYSTEM, "%s : net%d msgRecv failed !!!", __FUNCTION__, req->netNumber);
+        goto doNetFilterExit;
+    }
+//    trace(DEBUG_INFO, USER, "recv a msg from dumpcap ,msgtype %d", recvMsg->type);
+//    trace(DEBUG_INFO, USER, "draw         : %d", resp->draw);
+//    trace(DEBUG_INFO, USER, "recordsTotal : %d", resp->recordsTotal);
+//    trace(DEBUG_INFO, USER, "length       : %d", resp->length);
 
     trace(DEBUG_INFO, USER, "File Look Up succ");
 
@@ -1351,13 +1605,14 @@ static cfgMgrStatus doReboot(msg *in, msg *out)
 
     trace(DEBUG_INFO, USER, "Reboot start");
 
-    status  = CFGMGR_NOT_SUPPORT;
-    trace(DEBUG_ERR, USER, "Reboot not support !!!");
-    goto rebootExit;
+    /* save file */
+    system("sync");
+
+    /* tell aid stop feed watchdog */
+    rebootFlag = 1;
 
     trace(DEBUG_INFO, USER, "Reboot succ");
     
-rebootExit:
     genConfirmMsg(status, out);
 
     return status;
@@ -1368,13 +1623,12 @@ static cfgMgrStatus doLogLookUp(msg *in, msg *out)
     cfgMgrStatus status = CFGMGR_OK;
     logLookUpRequest *req = (logLookUpRequest *)in->data;
     logLookUpResponse * resp = (logLookUpResponse *)out->data;
-    int recordsTotal, i;
 
 //    trace(DEBUG_INFO, USER, "Log Look Up start");
 
     memset(out, 0, sizeof(msg));
 
-    resp->recordsTotal = logRequest(req->startTime, req->endTime, req->logType,
+    resp->recordsTotal = logRequest(req->startTime, req->endTime, req->lgType,
         req->logSignificance, req->start, resp->elements, MIN(PAGE_RECORDS_MAX, req->length));
     resp->draw = req->draw;
     resp->length= MIN(req->length, MIN(resp->recordsTotal - req->start, PAGE_RECORDS_MAX));
@@ -1396,7 +1650,7 @@ static cfgMgrStatus doLogExport(msg *in, msg *out)
 
     memset(out, 0, sizeof(msg));
 
-    resp->recordsTotal = logRequestExport(req->startTime, req->endTime, req->logType,req->logSignificance);
+    resp->recordsTotal = logRequestExport(req->startTime, req->endTime, req->lgType,req->logSignificance);
     strncpy(resp->logSearchResult, "tmp/logSearchResult.txt", sizeof(resp->logSearchResult));
     
     out->type = MSGTYPE_LOGEXPORT_RESPONSE;
@@ -1422,28 +1676,121 @@ static cfgMgrStatus doLogClearAll(msg *in, msg *out)
     return status;
 }
 
+static int getSmartctlAttrValue(FILE *fp, const char *name, char *val, int size)
+{
+    char line[1024];
+    char *pos;
+    int  len, copyLen = 0;
+    
+//    if (0 != fseek (fp, 0, SEEK_SET))
+//    {
+//        trace (DEBUG_ERR, SYSTEM, "%s : fseek error", __func__);
+//        return -1;
+//    }
+
+    while (NULL != fgets (line, sizeof(line), fp))
+    {
+        if (NULL == (pos = strstr(line, name)))
+            continue;
+
+        len = strlen(name);
+        //take out of ':'        
+//        if (pos[len++] != ':')  continue;
+        //take out of space
+        while(pos[len] == ' ')  len++;
+
+        //copy
+        while((pos[len] != '\r') && (pos[len] != '\n') && (copyLen < (size - 1)))
+        {
+            val[copyLen++] = pos[len++];
+        }
+        val[copyLen] = 0;
+
+        return 0;
+    }
+
+    val[copyLen++] = '-';
+    val[copyLen++] = '-';
+    val[copyLen++] = 0;
+    
+    return -1;
+}
+
+static int getDiskUseInfo (char *psize, char *pavail, char *pused, int lenMax)
+{
+    FILE *fp;
+    char line[1024];
+    unsigned long long size = 0, avail = 0, used = 0;
+    char *pos;
+    
+    if (NULL == (fp = popen ("df -k  |grep /dev/sda", "r")))
+    {
+        trace (DEBUG_ERR, SYSTEM, "popen df -k  |grep /dev/sda error");
+        goto getDiskUseInfoExit;
+    }
+
+    while(NULL != fgets(line, sizeof(line), fp))
+    {
+        if (NULL == (pos = strstr(line, "/dev/sda2")))
+            continue;
+        trace (DEBUG_INFO, SYSTEM, "%s", pos);
+
+        pos += strlen("/dev/sda2");
+        //take out of space
+        while(*pos == ' ') pos++;
+        trace (DEBUG_INFO, SYSTEM, "size : %s", pos);
+        size = (unsigned long long)1024 * atoi(pos);
+        //take out of szie & space
+        while(*pos != ' ') pos++;
+        while(*pos == ' ') pos++;
+        trace (DEBUG_INFO, SYSTEM, "used : %s", pos);
+        used = (unsigned long long)1024 * atoi(pos);
+        //take out of used & space
+        while(*pos != ' ') pos++;
+        while(*pos == ' ') pos++;
+        trace (DEBUG_INFO, SYSTEM, "avail : %s", pos);
+        avail = (unsigned long long)1024 * atoi(pos);
+
+        break;
+    }
+
+    pclose (fp);
+
+getDiskUseInfoExit:
+    snprintf (psize, lenMax, "%lld", size);
+    snprintf (pavail, lenMax, "%lld", avail);
+    snprintf (pused, lenMax, "%lld", used);
+
+    return 0;
+}
+
 static cfgMgrStatus doDiskInfo(msg *in, msg *out)
 {
     cfgMgrStatus status = CFGMGR_OK;
     diskInfoResponse * resp = (diskInfoResponse *)out->data;
+    FILE *fp;
 
     trace(DEBUG_INFO, USER, "Disk Info start");
 
     memset(out, 0, sizeof(msg));
-#if 1
-    strncpy(resp->modelNumber, "TOSHIBA DT01ACA100", DISK_INFO_STRING_LEN_MAX);
-    strncpy(resp->sn, "48DY7MRMS", DISK_INFO_STRING_LEN_MAX);
-    strncpy(resp->firwareRevision, "MS2OA810", DISK_INFO_STRING_LEN_MAX);
-    strncpy(resp->cacheBufferSize, "23652 KBytes", DISK_INFO_STRING_LEN_MAX);
-    strncpy(resp->rate, "7200", DISK_INFO_STRING_LEN_MAX);
-    strncpy(resp->formFactor, "3.5 inch", DISK_INFO_STRING_LEN_MAX);
-    strncpy(resp->temp, "36", DISK_INFO_STRING_LEN_MAX);
-    strncpy(resp->size, "1000000000000", DISK_INFO_STRING_LEN_MAX);
-    strncpy(resp->avail, "500000000000", DISK_INFO_STRING_LEN_MAX);
-    strncpy(resp->used, "500000000000", DISK_INFO_STRING_LEN_MAX);
-#else
-    //TODO
-#endif
+
+    if (NULL == (fp = popen ("smartctl -a /dev/sda", "r")))
+    {
+        trace (DEBUG_ERR, SYSTEM, "popen smartctl -a /dev/sda error");
+        return CFGMGR_ERR;
+    }
+
+    getSmartctlAttrValue(fp, "Device Model:", resp->modelNumber, DISK_INFO_STRING_LEN_MAX);
+    getSmartctlAttrValue(fp, "Serial Number:", resp->sn, DISK_INFO_STRING_LEN_MAX);
+    getSmartctlAttrValue(fp, "Firmware Version:", resp->firwareRevision, DISK_INFO_STRING_LEN_MAX);    
+    getSmartctlAttrValue(fp, "194 Temperature_Celsius     0x0000   100   100   000    Old_age   Offline      -", resp->temp, DISK_INFO_STRING_LEN_MAX);
+    getSmartctlAttrValue(fp, "cacheBufferSize:", resp->cacheBufferSize, DISK_INFO_STRING_LEN_MAX);
+    getSmartctlAttrValue(fp, "rate:", resp->rate, DISK_INFO_STRING_LEN_MAX);
+    getSmartctlAttrValue(fp, "formFactor:", resp->formFactor, DISK_INFO_STRING_LEN_MAX);
+    pclose (fp);
+    
+    getDiskUseInfo (resp->size, resp->avail, resp->used, DISK_INFO_STRING_LEN_MAX);
+
     out->type = MSGTYPE_DISKINFO_RESPONSE;
 
     trace(DEBUG_INFO, USER, "Disk Info succ");
@@ -1451,16 +1798,103 @@ static cfgMgrStatus doDiskInfo(msg *in, msg *out)
     return status;
 }
 
+static cfgMgrStatus captureGetStatistics(int netNumber, unsigned int *captureStatistics)
+{
+    cfgMgrStatus status = CFGMGR_NOT_SUPPORT;
+    msg          sendMsg, recvMsg;
+    msgID        sendMsgId, recvMsgId;
+    int          len;
+
+#ifdef CAPTURE_STATISTICS
+    if (netNumber == 1)
+    {
+        sendMsgId = cfgmgr2DumpcapMsgId0;
+        recvMsgId = dumpcap2CfgmgrMsgId0;
+    }
+    else if (netNumber == 2)
+    {
+        sendMsgId = cfgmgr2DumpcapMsgId1;
+        recvMsgId = dumpcap2CfgmgrMsgId1;
+    }
+    else
+    {
+        status = CFGMGR_NET_NUMBER_INVALID;
+        goto getCaptureStatisticsExit;
+    }
+
+    sendMsg.type = MSGTYPE_CAPTURE_STATISTICS_REQUEST;
+
+    if(-1 == msgSend(sendMsgId, &sendMsg))
+    {
+        trace(DEBUG_ERR, SYSTEM, "%s : msgSend failed !!!", __FUNCTION__);
+        goto getCaptureStatisticsExit;
+    }
+    trace(DEBUG_INFO, SYSTEM, "%s : lan%d send capture statistics request msg to dumpcap", __FUNCTION__, netNumber);
+    if((len = msgRecv(recvMsgId, &recvMsg)) <= 0)
+    {
+        trace(DEBUG_ERR, SYSTEM, "%s : net%d msgRecv from dumpcap error !!!", 
+            __FUNCTION__, netNumber);
+        goto getCaptureStatisticsExit;
+    }
+    trace(DEBUG_INFO, SYSTEM, "%s : lan%d recv capture statistics request msg from dumpcap", __FUNCTION__, netNumber);
+    *captureStatistics = *(unsigned int *)recvMsg.data;
+
+    status = CFGMGR_OK;
+#endif
+
+getCaptureStatisticsExit:
+
+    return status;
+}
+
+static int getRuntime (void)
+{
+    int fd;
+    char buffer[50];
+    int cnt = 0;
+    int runtime = -1;
+    
+    if (0 > (fd = open("/proc/uptime", O_RDONLY)))
+    {
+        trace(DEBUG_ERR, SYSTEM,"open  /proc/uptime failed.\n");
+        return runtime;
+    }
+    do
+    {
+        if (1 != read(fd, buffer + cnt, 1))
+        {
+            trace(DEBUG_ERR, SYSTEM,"read /proc/uptime failed.\n");
+            goto exit;
+        }
+        cnt++;
+    }while((buffer[cnt - 1] != ' ') && (buffer[cnt - 1] != EOF) && (cnt < sizeof(buffer)));
+    
+    if ((cnt < sizeof(buffer)) && (buffer[cnt - 1] == ' '))
+    {
+        buffer[cnt - 1] = 0;
+        
+        runtime = atoi(buffer);
+    }
+    else
+    {
+        trace(DEBUG_ERR, SYSTEM,"failed to read runtime from /proc/uptime\n");
+    }
+exit:    
+    close(fd);
+    return runtime;
+}
+
 static cfgMgrStatus doSystemInfo(msg *in, msg *out)
 {
-    cfgMgrStatus status = CFGMGR_OK;
-    systemInfoResponse * resp = (systemInfoResponse *)out->data;
+    cfgMgrStatus       status = CFGMGR_OK;
+    systemInfoResponse *resp = (systemInfoResponse *)out->data;
+    linkInfo           lkInfo;
+    unsigned int       captureStatistics;
 
     trace(DEBUG_INFO, USER, "System Info start");
 
     memset(out, 0, sizeof(msg));
 
-#if 1
     strncpy(resp->hwVer, "V1.0", SYSTEM_INFO_STRING_LEN_MAX);
     strncpy(resp->sn, "xxxx-xxxx-xxxx", SYSTEM_INFO_STRING_LEN_MAX);
     strncpy(resp->cfgMgrVersion, "V1.0", SYSTEM_INFO_STRING_LEN_MAX);
@@ -1468,18 +1902,38 @@ static cfgMgrStatus doSystemInfo(msg *in, msg *out)
     resp->cfgMgrLastUpdateTime = time(NULL);
     resp->logicLastUpdateTime = time(NULL);
     resp->currentTime = time(NULL);
-    resp->runningSec = 3600;
-    resp->lan1Status.linkSpeed = 100000000;
-    resp->lan1Status.linkStat = LINK_UP;
-    resp->lan1Status.nRecvPackages = 100;
+    resp->runningSec = getRuntime();
+    if(0 != ethGetLinkInfo(NET1_NAME, &lkInfo))
+    {
+        trace(DEBUG_ERR, SYSTEM, "ethGetLinkInfo %s error.", NET1_NAME);
+        lkInfo.lk = LINK_DOWN;
+        lkInfo.speed = 0;
+    }
+    resp->lan1Status.linkSpeed = lkInfo.speed;
+    resp->lan1Status.linkStat = lkInfo.lk;
+    if (CFGMGR_OK != captureGetStatistics(1, &captureStatistics))
+    {
+        trace(DEBUG_ERR, SYSTEM, "%s : get lan1 captureStatistics error", __FUNCTION__);
+        captureStatistics = 0;
+    }
+    resp->lan1Status.nRecvPackages = captureStatistics;
     resp->lan1Status.nSendPackages = 100;
-    resp->lan2Status.linkSpeed = 100000000;
-    resp->lan2Status.linkStat = LINK_UP;
-    resp->lan2Status.nRecvPackages = 100;
+    if(0 != ethGetLinkInfo(NET2_NAME, &lkInfo))
+    {
+        trace(DEBUG_ERR, SYSTEM, "ethGetLinkInfo %s error.", NET2_NAME);
+        lkInfo.lk = LINK_DOWN;
+        lkInfo.speed = 0;
+    }
+    resp->lan2Status.linkSpeed = lkInfo.speed;
+    resp->lan2Status.linkStat = lkInfo.lk;
+    if (CFGMGR_OK != captureGetStatistics(2, &captureStatistics))
+    {
+        trace(DEBUG_ERR, SYSTEM, "%s : get lan2 captureStatistics error", __FUNCTION__);
+        captureStatistics = 0;
+    }
+    resp->lan2Status.nRecvPackages = captureStatistics;
     resp->lan2Status.nSendPackages = 100;
-#else
-    //TODO
-#endif
+
     out->type = MSGTYPE_SYSTEMINFO_RESPONSE;
 
     trace(DEBUG_INFO, USER, "System Info succ");
@@ -1533,11 +1987,24 @@ static cfgMgrStatus doUpdateLogicFile(msg *in, msg *out)
 
     trace(DEBUG_INFO, USER, "UpdateLogicFile start");
 
-    //TODO
+    system("arp -i eth0 -s 192.168.0.2 00:0a:35:01:fe:c0");
+
+    fpgaCtrl (OPCODE_NET0_FPGA_UPDATE_ON);
+
+    if (0 != fpgaRmtUdt(FPGA_UPDATE_FILE_NAME))
+    {
+        trace(DEBUG_INFO, USER, "Update logic config file failed");
+        status = CFGMGR_ERR;
+        goto doUpdateLogicFileExit;
+    }
+
+    fpgaCtrl (OPCODE_NET0_FPGA_UPDATE_OFF);
+
+    system("sync");
 
     trace(DEBUG_INFO, USER, "UpdateLogicFile succ");
 
-//doUpdateLogicFileExit:
+doUpdateLogicFileExit:
     genConfirmMsg(status, out);
 
     return status;
@@ -1549,7 +2016,7 @@ static cfgMgrStatus doUpdateCfgMgrFile(msg *in, msg *out)
 
     trace(DEBUG_INFO, USER, "UpdateCfgMgrFile start");
 
-    //TODO
+    system("sync");
 
     trace(DEBUG_INFO, USER, "UpdateCfgMgrFile succ");
 
@@ -1583,25 +2050,59 @@ static cfgMgrStatus doUpdateWeb(msg *in, msg *out)
 
 
 
-static void webProcess (void)
+static int webProcess (void)
 {
     int len, netNumber;
-    msgID mId;
     msg recvMsg, sendMsg;
     cfgMgrStatus status = CFGMGR_OK;
     netParam *net;
     
     /** set process name */
-    prctl(PR_SET_NAME, WEB_THREAD_NAME);
-
-    /** open message */
-//    mq_unlink(CGI_CFGMGR_MSG_NAME);
-    if((msgID)-1 == (mId = msgOpen(CGI_CFGMGR_MSG_NAME)))
-    {
-        trace(DEBUG_ERR, SYSTEM, "msgOpen %s error !!!", CGI_CFGMGR_MSG_NAME);
-        return;
-    }    
+    prctl(PR_SET_NAME, WEB_THREAD_NAME); 
     
+#ifndef SYSTEM_V_MQUEUE
+    mq_unlink(CGI_2_CFGMGR_MSG_NAME);
+    mq_unlink(CFGMGR_2_CGI_MSG_NAME);
+    mq_unlink(CFGMGR_2_DUMPCAP_MSG0_NAME);
+    mq_unlink(CFGMGR_2_DUMPCAP_MSG1_NAME);
+    mq_unlink(DUMPCAP_2_CFGMGR_MSG0_NAME);
+    mq_unlink(DUMPCAP_2_CFGMGR_MSG1_NAME);
+#endif
+    if((msgID)-1 == (cgi2CfgmgrMsgId = msgOpen(CGI_2_CFGMGR_MSG_NAME)))
+    {
+        trace(DEBUG_ERR, SYSTEM, "msgOpen %s error !!!", CGI_2_CFGMGR_MSG_NAME);
+        return -1;
+    }
+
+    if((msgID)-1 == (cfgmgr2CgiMsgId = msgOpen(CFGMGR_2_CGI_MSG_NAME)))
+    {
+        trace(DEBUG_ERR, SYSTEM, "msgOpen %s error !!!", CFGMGR_2_CGI_MSG_NAME);
+        return -1;
+    }
+
+    if((msgID)-1 == (cfgmgr2DumpcapMsgId0 = msgOpen(CFGMGR_2_DUMPCAP_MSG0_NAME)))
+    {
+        trace(DEBUG_ERR, SYSTEM, "msgOpen %s error !!!", CFGMGR_2_DUMPCAP_MSG0_NAME);
+        return -1;
+    }
+
+    if((msgID)-1 == (cfgmgr2DumpcapMsgId1 = msgOpen(CFGMGR_2_DUMPCAP_MSG1_NAME)))
+    {
+        trace(DEBUG_ERR, SYSTEM, "msgOpen %s error !!!", CFGMGR_2_DUMPCAP_MSG1_NAME);
+        return -1;
+    }
+
+    if((msgID)-1 == (dumpcap2CfgmgrMsgId0 = msgOpen(DUMPCAP_2_CFGMGR_MSG0_NAME)))
+    {
+        trace(DEBUG_ERR, SYSTEM, "msgOpen %s error !!!", DUMPCAP_2_CFGMGR_MSG0_NAME);
+        return -1;
+    }
+
+    if((msgID)-1 == (dumpcap2CfgmgrMsgId1 = msgOpen(DUMPCAP_2_CFGMGR_MSG1_NAME)))
+    {
+        trace(DEBUG_ERR, SYSTEM, "msgOpen %s error !!!", DUMPCAP_2_CFGMGR_MSG1_NAME);
+        return -1;
+    }
 
     /** load parameters */
     if(CFGMGR_OK != (status = paramLoad(&pa)))
@@ -1609,6 +2110,17 @@ static void webProcess (void)
         trace(DEBUG_ERR, SYSTEM, "paramLoad failed(%d)", (int)status);
         goto webProcessExit;
     }
+
+    /** set capture */
+    if (CFGMGR_OK != netCapture(&pa.lan1.capture, 1))
+    {
+        trace(DEBUG_ERR, SYSTEM, "netCapture 1 excute failed !!!");
+    }
+    if (CFGMGR_OK != netCapture(&pa.lan2.capture, 2))
+    {
+        trace(DEBUG_ERR, SYSTEM, "netCapture 2 excute failed !!!");
+    }
+
     /** set net parameters */
     for(netNumber = 1; netNumber <= 2; netNumber++)
     {
@@ -1622,17 +2134,38 @@ static void webProcess (void)
             goto webProcessExit;
         }
     }
+    /** net filter */
+    fgpaCtrlInit();
+    if (CFGMGR_OK != netFilter(&pa.lan1.filter, 1))
+    {
+        trace(DEBUG_ERR, SYSTEM, "netFilter 1 excute failed !!!");
+        goto webProcessExit;
+    }
+    if (CFGMGR_OK != netFilter(&pa.lan2.filter, 2))
+    {
+        trace(DEBUG_ERR, SYSTEM, "netFilter 2 excute failed !!!");
+        goto webProcessExit;
+    }
+    
+    /** get mac address */
+    get_mac_addr(NET1_NAME, pa.lan1.net.mac);
+    get_mac_addr(NET2_NAME, pa.lan2.net.mac);
+    if(CFGMGR_OK != (status = paramSave(&pa)))
+    {
+        trace(DEBUG_ERR, USER, "paramSave failed.");
+        goto webProcessExit;
+    }
 
     while(1)
     {
-        if((len = msgRecv(mId, &recvMsg)) <= 0)
+        if((len = msgRecv(cgi2CfgmgrMsgId, &recvMsg)) <= 0)
         {
-            trace(DEBUG_ERR, SYSTEM, "msgRecv %s error !!!", CGI_CFGMGR_MSG_NAME);
+            trace(DEBUG_ERR, SYSTEM, "msgRecv %s error !!!", CGI_2_CFGMGR_MSG_NAME);
             break;
         }
-
+#ifdef DEBUG_CFGMGR
         trace(DEBUG_INFO, SYSTEM, "msgRecv a message, type %d.", recvMsg.type);
-
+#endif
         switch(recvMsg.type)
         {
             case MSGTYPE_LOGIN_REQUEST:
@@ -1721,7 +2254,7 @@ static void webProcess (void)
                 break;
         }
 
-        if(-1 == msgSend(mId, &sendMsg))
+        if(-1 == msgSend(cfgmgr2CgiMsgId, &sendMsg))
         {
             trace(DEBUG_ERR, SYSTEM, "msgSend failed !!!");
             goto webProcessExit;
@@ -1729,28 +2262,21 @@ static void webProcess (void)
     }
 
 webProcessExit:
-
-    msgClose(mId);
+    if (status != CFGMGR_OK)
+    {
+        rebootFlag = 1;
+    }
+    
+    return status;
 }
- 
+
 int webInit (void)
 {
 	int ret;
 	pthread_attr_t attr;
 
-    mq_unlink(CFGMGR_DUMPCAP_MSG0_NAME);
-    if((msgID)-1 == (cfgmgrDumpcapMsgId0 = msgOpen(CFGMGR_DUMPCAP_MSG0_NAME)))
-    {
-        trace(DEBUG_ERR, SYSTEM, "msgOpen %s error !!!", CFGMGR_DUMPCAP_MSG0_NAME);
-        return -1;
-    }
-    mq_unlink(CFGMGR_DUMPCAP_MSG1_NAME);
-    if((msgID)-1 == (cfgmgrDumpcapMsgId1 = msgOpen(CFGMGR_DUMPCAP_MSG1_NAME)))
-    {
-        trace(DEBUG_ERR, SYSTEM, "msgOpen %s error !!!", CFGMGR_DUMPCAP_MSG1_NAME);
-        return -1;
-    }
-    
+    system("dumpcap -i eth0 -w /usr/httproot/NetFiles/eth0 -b filesize:100000 -b files:2100 -t -P -B 256 &");
+    system("dumpcap -i eth1 -w /usr/httproot/NetFiles/eth1 -b filesize:100000 -b files:2100 -t -P -B 256 &");
 	
 	ret = pthread_attr_init(&attr);
 	assert(ret == 0);

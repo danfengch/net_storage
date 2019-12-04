@@ -43,11 +43,87 @@
 
 #include "ringbuffer.h"
 #include <wsutil/file_util.h>
+#include "/home/chenxu/LOONGSON-2k1000/src/CfgMgr/inc/config.h"
+#include <time.h>
+#include <stdlib.h>
+#include <string.h>
+#include "log.h"
 
+extern char *strptime(char *buf, char *format, struct tm *tm);
 
 
 ringbuf_data rb_data;
 
+static int ringbuf_load_history_file_list(const char *capfile_name)
+{
+    FILE *fp;
+    char line[1024];
+    char fileName[200];
+    int lineNum = 0;
+    char temp[100];
+    struct tm daytime;
+    unsigned int n;
+    int net_num;
+    struct stat s;
+
+    net_num = capfile_name[strlen(capfile_name) - 1] - '0';
+    
+    snprintf(fileName, sizeof(fileName), "%shfList%d", STORAGE_PATH, net_num);
+    if (NULL == (fp = fopen(fileName, "r")))
+    {
+        printf ("fopen %s failed\n", fileName);
+        goto ringbuf_load_history_file_list_exit;
+    }
+
+    while(NULL != fgets(line, sizeof(line), fp))
+    {
+        for (n = 0; n < (sizeof(temp) - 1); n++)
+        {
+            if ((line[n] != '\r') && (line[n] != '\n'))
+                temp[n] = line[n];
+            else
+                break;
+        }
+        temp[n] = 0;
+//        printf ("%s : [%d] file %s\n", __func__, lineNum, temp);
+        
+        strptime(&temp[11], "%Y%m%d%H%M%S", &daytime);
+
+        if (rb_data.files[lineNum % rb_data.num_files].name)
+        {
+            printf ("%s delete file %s\n", __func__, 
+                rb_data.files[lineNum % rb_data.num_files].name);
+            ws_unlink(rb_data.files[lineNum % rb_data.num_files].name);
+            g_free(rb_data.files[lineNum % rb_data.num_files].name);
+            rb_data.files[lineNum % rb_data.num_files].name = NULL;
+        }
+        rb_data.files[lineNum % rb_data.num_files].name = 
+            g_strconcat(STORAGE_PATH, temp, NULL, NULL, NULL,NULL, NULL);
+        if (rb_data.files[lineNum % rb_data.num_files].name == NULL) 
+        {
+            printf ("%s : g_strconcat mem error\n", __func__);
+            goto ringbuf_load_history_file_list_exit;
+        }
+        
+//        if (0 != stat(rb_data.files[lineNum % rb_data.num_files].name, &s))
+//        {
+//            g_log(LOG_DOMAIN_CAPTURE_CHILD, G_LOG_LEVEL_INFO,
+//              "%s : stat file %s error\n", __func__, rb_data.files[lineNum % rb_data.num_files].name);
+//            goto ringbuf_load_history_file_list_exit;
+//        }
+        rb_data.files[lineNum % rb_data.num_files].ti = mktime(&daytime);
+//        rb_data.files[lineNum].ti = s.st_mtime;
+        lineNum++;
+    }
+
+    fclose(fp);
+
+ringbuf_load_history_file_list_exit:
+    rb_data.curr_file_num = lineNum % rb_data.num_files;
+    printf ("%s : curr_file_num = %d\n", __func__, rb_data.curr_file_num);
+
+    return rb_data.curr_file_num;
+}
 
 /*
  * create the next filename and open a new binary file with that name
@@ -176,8 +252,10 @@ ringbuf_init(const char *capfile_name, guint num_files, gboolean group_read_acce
     rb_data.files[i].name = NULL;
   }
 
+  ringbuf_load_history_file_list(capfile_name);
+
   /* create the first file */
-  if (ringbuf_open_file(&rb_data.files[0], NULL) == -1) {
+  if (ringbuf_open_file(&rb_data.files[rb_data.curr_file_num], NULL) == -1) {
     ringbuf_error_cleanup();
     return -1;
   }

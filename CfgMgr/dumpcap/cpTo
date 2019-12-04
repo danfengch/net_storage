@@ -1,3 +1,12 @@
 #!/bin/bash
-cp dumpcap /home/chenxu/mount/tftproot/
+cp capture_opts.c ../../../toolchain/buildroot/output/build/wireshark-2.6.4/
+cp capture_opts.h ../../../toolchain/buildroot/output/build/wireshark-2.6.4/
+cp capture_stop_conditions.c ../../../toolchain/buildroot/output/build/wireshark-2.6.4/
+cp capture_stop_conditions.h ../../../toolchain/buildroot/output/build/wireshark-2.6.4/
+cp dumpcap.c ../../../toolchain/buildroot/output/build/wireshark-2.6.4/
+cp ringbuffer.c ../../../toolchain/buildroot/output/build/wireshark-2.6.4/
+cp ringbuffer.h ../../../toolchain/buildroot/output/build/wireshark-2.6.4/ 
+cp Makefile ../../../toolchain/buildroot/output/build/wireshark-2.6.4/ 
+cp cpTo_dumpcap ../../../toolchain/buildroot/output/build/wireshark-2.6.4/ 
+
 

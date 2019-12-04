@@ -20,15 +20,26 @@
 #include <time.h>
 #include <sys/ioctl.h>
 #include <pthread.h>
+#include <cfgMgrMessage.h>
+#include <version.h>
 
 extern pthread_t webThreadId;
+extern pthread_t aidThreadId;
 
 extern int webInit (void);
+extern void aidInit(void);
 
 int main(int argc, char * argv[])
 {   
+
+    printf("   VERSION : %d.%d\n", CFGMGR_MAJOR, CFGMGR_MINOR);
+    printf("BUILD TIME : %s %s\n", __DATE__, __TIME__);
+
+    aidInit();
+    
     webInit();
 
+    pthread_join(aidThreadId, NULL);
     pthread_join(webThreadId, NULL);
     
     return 0;

@@ -120,6 +120,7 @@
 
 /* for g_thread_new */
 #include "wsutil/glib-compat.h"
+#include <pthread.h>
 
 #ifdef DEBUG_CHILD_DUMPCAP
 FILE *debug_log;   /* for logging debug messages to  */
@@ -382,6 +383,17 @@ static capture_options global_capture_opts;
 static gboolean quiet = FALSE;
 static gboolean use_threads = FALSE;
 static guint64 start_time;
+static pthread_mutex_t capture_mutex;
+static int is_capture = FALSE;
+
+#define CAPTURE_STOP \
+    is_capture = FALSE;\
+    pthread_mutex_lock(&capture_mutex);
+    
+#define CAPTURE_START \
+    pthread_mutex_unlock(&capture_mutex);\
+    is_capture = TRUE;
+
 
 static void capture_loop_write_packet_cb(u_char *pcap_src_p, const struct pcap_pkthdr *phdr,
                                          const u_char *pd);
@@ -3576,45 +3588,80 @@ pcap_read_handler(void* arg)
     return (NULL);
 }
 
+//#define DUMP_DEBUG
 #include "/home/chenxu/LOONGSON-2k1000/src/CfgMgr/inc/config.h"
-#include "message.h"
+#include "cfgMgrMessage.h"
+#include <time.h>
+#include <stdlib.h>
+extern const char *time2format2(time_t ti);
+
+static void genConfirmMsg(cfgMgrStatus status, msg *m)
+{
+    confirmResponse *resp = (confirmResponse *)m->data;
+
+    memset(m, 0, sizeof(msg));
+    
+    m->type = MSGTYPE_COMFIRM;
+    resp->status = status;
+    resp->errMessage[0] = 0;
+}
+
 
 static cfgMgrStatus doFileLookUp(msg *in, msg *out)
 {
     cfgMgrStatus status = CFGMGR_OK;
     fileLookUpRequest *req = (fileLookUpRequest *)in->data;
-    fileLookUpResponse * resp = (fileLookUpResponse *)out->data;
-    int recordsTotal, i, len, earliest, latest, current_file_num;
-    msgID mId;
-    msg *sendMsg = in, *recvMsg = out;
+    fileLookUpResponse *resp = (fileLookUpResponse *)out->data;
+    int i, earliest, latest, current_file_num;
+//    msg *sendMsg = in, *recvMsg = out;
     struct stat s;
     char *p;
 
     cmdarg_err("dumpcap : File Look Up start\n");
 
     memset(out, 0, sizeof(msg));
-#if 0
+    
     current_file_num = rb_data.curr_file_num % rb_data.num_files;
     i = current_file_num;
     earliest = -1;
     latest = -1;
     resp->recordsTotal = 0;
-    
+    resp->draw = req->draw;
+
+#ifdef DUMP_DEBUG
+    cmdarg_err("%s current_file_num %d\n",  __FUNCTION__, current_file_num);
+    cmdarg_err("%s req->start %d\n",        __FUNCTION__, req->start);
+    cmdarg_err("%s req->length %d\n",       __FUNCTION__, req->length);
+    cmdarg_err("%s req->startTime %s\n",    __FUNCTION__, time2format2(req->startTime));
+    cmdarg_err("%s req->endTime %s\n",      __FUNCTION__, time2format2(req->endTime));
+#endif
     do
     {
         //遇到空文件
         if (!rb_data.files[i].name) {
+            cmdarg_err("%s break i %d\n", __FUNCTION__, i);
             break;
         }
-
+#ifdef DUMP_DEBUG
+        cmdarg_err("%s files time %s\n", __FUNCTION__, time2format2(rb_data.files[i].ti));
+#endif
         //在时间范围内
         if((rb_data.files[i].ti <= req->endTime) && (rb_data.files[i].ti >= req->startTime)){
-            if (latest == -1){
+            if (latest == -1){                
                 latest = i;
+#ifdef DUMP_DEBUG
+                cmdarg_err("%s latest %d\n", __FUNCTION__, latest);
+#endif
             }
             earliest = i;
+#ifdef DUMP_DEBUG
+            cmdarg_err("%s earliest %d\n", __FUNCTION__, earliest);
+#endif
             resp->recordsTotal++;
         }else if (rb_data.files[i].ti < req->startTime){
+#ifdef DUMP_DEBUG
+            cmdarg_err("%s (rb_data.files[i].ti < req->startTime) break %d\n", __FUNCTION__, i);
+#endif
             break;
         }
 
@@ -3627,24 +3674,79 @@ static cfgMgrStatus doFileLookUp(msg *in, msg *out)
     }else if (-1 == earliest){
         earliest = (current_file_num + 1) % rb_data.num_files;
     }
+
+#ifdef DUMP_DEBUG
+    cmdarg_err("%s earliest %d\n", __FUNCTION__, earliest);
+    cmdarg_err("%s latest %d\n", __FUNCTION__, latest);
+    cmdarg_err("%s resp->recordsTotal %d\n", __FUNCTION__, resp->recordsTotal);
+#endif
+    
         
     for (i = (earliest + req->start) % rb_data.num_files, resp->length = 0; 
-         (i != ((latest + 1) % rb_data.num_files)) && (resp->length < req->length); 
+         (resp->length < resp->recordsTotal) && (resp->length < req->length) /*&& (i != ((latest + 1) % rb_data.num_files))*/; 
          i = (i+1) % rb_data.num_files, resp->length++){
-        stat(rb_data.files[i].name, &s);
+        if (0 != stat(rb_data.files[i].name, &s))
+        {
+            cmdarg_err("%s : stat %s error \n", __func__, rb_data.files[i].name);
+            break;
+        }
         resp->elements[resp->length].sizeMB = s.st_size/(1024 * 1024);
         resp->elements[resp->length].modifyTime = s.st_mtime;
 
-        p = rb_data.files[i].name;
-        while(strchr(p, '/'))
-            p = strchr(p, '/') + 1;
-        strncpy(resp->elements[req->length].fileName, p, FILE_NAME_LEN_MAX);
-    }
+        p = rb_data.files[i].name; 
+        if (p){
+            while(strchr(p, '/')){
+                p = strchr(p, '/') + 1; 
+            }
+        }
+        strncpy(resp->elements[resp->length].fileName, p, FILE_NAME_LEN_MAX);
+#ifdef DUMP_DEBUG
+        cmdarg_err("%s sizeMB    : %d MB\n", __FUNCTION__, resp->elements[resp->length].sizeMB);
+        cmdarg_err("%s modifyTime: %s\n", __FUNCTION__, time2format2(resp->elements[resp->length].modifyTime ));
+        cmdarg_err("%s fileName  : %s\n", __FUNCTION__, resp->elements[resp->length].fileName);
 #endif
+    }
+
     out->type = MSGTYPE_FILELOOKUP_RESPONSE;
 
-doNetFilterExit:
+    return status;
+}
 
+static cfgMgrStatus doNetCapture(msg *in, msg *out)
+{
+    cfgMgrStatus status = CFGMGR_OK;
+    int          *isCapture;
+    confirmResponse *resp = (confirmResponse *)out->data;
+
+    isCapture = (int *)in->data;
+
+    if((*isCapture) && (!is_capture))
+    {
+        cmdarg_err("%s : capture start.\n", __FUNCTION__);
+        CAPTURE_START;
+    }
+    else if((!*isCapture) && (is_capture))
+    {
+        CAPTURE_STOP;
+        cmdarg_err("%s : capture stop.\n", __FUNCTION__);
+    }
+
+    out->type = MSGTYPE_COMFIRM;
+    resp->status = CFGMGR_OK;
+    resp->errMessage[0] = 0;
+
+    return status;
+}
+
+static cfgMgrStatus doCaptureGetStatistics(msg *in, msg *out)
+{
+    cfgMgrStatus    status = CFGMGR_OK;
+    unsigned int    *captureStatistics = (unsigned int *)out->data;
+
+    *captureStatistics = (unsigned int)global_ld.packet_count;
+
+    out->type = MSGTYPE_CAPTURE_STATISTICS_RESPONSE;
+    
     return status;
 }
 
@@ -3652,42 +3754,59 @@ static void *
 cfgmgr_dumpcap_dialog(void* arg)
 {
     int          net_number, len;
-    char         errmsg[MSG_MAX_LENGTH+1];
     msg          recvMsg, sendMsg;
-    msgID        cfgmgr_dumpcap_msg_id;
-    cfgMgrStatus status;
+    msgID        sendMsgId, recvMsgId;
+    cfgMgrStatus status;    
 
     net_number = (int)arg;
 
+    cmdarg_err("%s : net_number %d\n", __FUNCTION__, net_number);
+
     if (net_number == 0){
-        cfgmgr_dumpcap_msg_id = msgOpen(CFGMGR_DUMPCAP_MSG0_NAME);
+        sendMsgId = msgOpen(DUMPCAP_2_CFGMGR_MSG0_NAME);
+        recvMsgId = msgOpen(CFGMGR_2_DUMPCAP_MSG0_NAME);
     }else{
-        cfgmgr_dumpcap_msg_id = msgOpen(CFGMGR_DUMPCAP_MSG1_NAME);
+        sendMsgId = msgOpen(DUMPCAP_2_CFGMGR_MSG1_NAME);
+        recvMsgId = msgOpen(CFGMGR_2_DUMPCAP_MSG1_NAME);
     }
-    if (((msgID) -1) ==  cfgmgr_dumpcap_msg_id){
-        cmdarg_err("msgOpen %s err\n", net_number == 0 ? CFGMGR_DUMPCAP_MSG0_NAME : CFGMGR_DUMPCAP_MSG1_NAME);
+    if (((msgID) -1) ==  sendMsgId){
+        cmdarg_err("msgOpen net%d sendMsg err\n", net_number);
         goto dialog_exit;
     }
-        
+    if (((msgID) -1) ==  recvMsgId){
+        cmdarg_err("msgOpen net%d recvMsg err\n", net_number);
+        goto dialog_exit;
+    }    
 
     while (global_ld.go) {        
 
-        if((len = msgRecv(cfgmgr_dumpcap_msg_id, &recvMsg)) <= 0){
-            cmdarg_err("msgRecv err\n");
-            goto msg_close;
+        if((len = msgRecv(recvMsgId, &recvMsg)) <= 0){
+            cmdarg_err("msgRecv err, len = %d\n", len);
+            continue;
         }
 
-        cmdarg_err("dumpca : recv msg type %d\n", recvMsg.type);
+        cmdarg_err("dumpcap : recv msg type %d\n", recvMsg.type);
 
         switch (recvMsg.type){
             case MSGTYPE_FILELOOKUP_REQUEST:
                 status = doFileLookUp(&recvMsg, &sendMsg);
                 break;
+            case MSGTYPE_NETCAPTURE_REQUEST:
+                status = doNetCapture(&recvMsg, &sendMsg);
+                break;
+            case MSGTYPE_CAPTURE_STATISTICS_REQUEST:
+                status = doCaptureGetStatistics(&recvMsg, &sendMsg);
+                break;
             default:
                 break;
         }
 
-        if(-1 == msgSend(cfgmgr_dumpcap_msg_id, &sendMsg)){
+        if (status != CFGMGR_OK)
+        {
+            genConfirmMsg(status, &sendMsg);
+        }
+
+        if(-1 == msgSend(sendMsgId, &sendMsg)){
             printf("msgSend failed !!!");
             goto msg_close;
         } 
@@ -3696,7 +3815,8 @@ cfgmgr_dumpcap_dialog(void* arg)
           net_number);
 
 msg_close:
-    msgClose(cfgmgr_dumpcap_msg_id);
+    msgClose(sendMsgId);
+    msgClose(recvMsgId);    
 
 dialog_exit:
     g_thread_exit(NULL);
@@ -3729,6 +3849,7 @@ capture_loop_start(capture_options *capture_opts, gboolean *stats_known, struct 
     capture_src      *pcap_src;
     interface_options *interface_opts;
     guint             i, error_index        = 0;
+    char              cmd[100];
 
     *errmsg           = '\0';
     *secondary_errmsg = '\0';
@@ -3747,13 +3868,28 @@ capture_loop_start(capture_options *capture_opts, gboolean *stats_known, struct 
     global_ld.err                 = 0;  /* no error seen yet */
     global_ld.pdh                 = NULL;
     global_ld.autostop_files      = 0;
-    global_ld.save_file_fd        = -1;
-
-    cfgmgrDumpCaptid = g_thread_new("CfgMgr Dumpcap Dialogue", cfgmgr_dumpcap_dialog, 
-        global_capture_opts.default_options.net_number);
+    global_ld.save_file_fd        = -1;    
 
     /* We haven't yet gotten the capture statistics. */
     *stats_known      = FALSE;
+
+    if(0 != pthread_mutex_init(&capture_mutex, NULL))
+    {
+        cmdarg_err("capture_mutex init err\n");
+        goto error;
+    }
+    
+    CAPTURE_STOP;
+
+    /* generate history file list in ethx_hfList file */
+    snprintf (cmd, sizeof(cmd), "ls -rt %s |grep eth%d > %shfList%d", STORAGE_PATH, 
+        global_capture_opts.default_options.net_number, 
+        STORAGE_PATH, global_capture_opts.default_options.net_number);
+    printf("%s : cmd %s\n", __func__, cmd);
+    (void)system(cmd);
+
+    cfgmgrDumpCaptid = g_thread_new("CfgMgr Dumpcap Dialogue", cfgmgr_dumpcap_dialog, 
+        (gpointer)global_capture_opts.default_options.net_number);
 
     g_log(LOG_DOMAIN_CAPTURE_CHILD, G_LOG_LEVEL_INFO, "Capture loop starting ...");
     capture_opts_log(LOG_DOMAIN_CAPTURE_CHILD, G_LOG_LEVEL_DEBUG, capture_opts);
@@ -3876,6 +4012,10 @@ capture_loop_start(capture_options *capture_opts, gboolean *stats_known, struct 
     }
     while (global_ld.go) {
         /* dispatch incoming packets */
+
+        CAPTURE_STOP;
+        CAPTURE_START;
+        
         if (use_threads) {
             pcap_queue_element *queue_element;
 #if GLIB_CHECK_VERSION(2,31,18)
@@ -4081,6 +4221,7 @@ capture_loop_start(capture_options *capture_opts, gboolean *stats_known, struct 
     if (cnd_autostop_duration != NULL)
         cnd_delete(cnd_autostop_duration);
 
+#if 1
     /* did we have a pcap (input) error? */
     for (i = 0; i < capture_opts->ifaces->len; i++) {
         pcap_src = g_array_index(global_ld.pcaps, capture_src *, i);
@@ -4121,6 +4262,7 @@ capture_loop_start(capture_options *capture_opts, gboolean *stats_known, struct 
             break;
         }
     }
+#endif
     /* did we have an output error while capturing? */
     if (global_ld.err == 0) {
         write_ok = TRUE;
@@ -5409,7 +5551,7 @@ console_log_handler(const char *log_domain, GLogLevelFlags log_level,
     time_t      curr;
     struct tm  *today;
     const char *level;
-    gchar      *msg;
+    gchar      *logmsg;
 
     /* ignore log message, if log_level isn't interesting */
     if ( !(log_level & G_LOG_LEVEL_MASK & ~(G_LOG_LEVEL_DEBUG|G_LOG_LEVEL_INFO))) {
@@ -5446,7 +5588,7 @@ console_log_handler(const char *log_domain, GLogLevelFlags log_level,
     /* Generate the output message                                  */
     if (log_level & G_LOG_LEVEL_MESSAGE) {
         /* normal user messages without additional infos */
-        msg =  g_strdup_printf("%s\n", message);
+        logmsg =  g_strdup_printf("%s\n", message);
     } else {
         /* create a "timestamp" */
         time(&curr);
@@ -5454,12 +5596,12 @@ console_log_handler(const char *log_domain, GLogLevelFlags log_level,
 
         /* info/debug messages with additional infos */
         if (today != NULL)
-            msg = g_strdup_printf("%02u:%02u:%02u %8s %s %s\n",
+            logmsg = g_strdup_printf("%02u:%02u:%02u %8s %s %s\n",
                                   today->tm_hour, today->tm_min, today->tm_sec,
                                   log_domain != NULL ? log_domain : "",
                                   level, message);
         else
-            msg = g_strdup_printf("Time not representable %8s %s %s\n",
+            logmsg = g_strdup_printf("Time not representable %8s %s %s\n",
                                   log_domain != NULL ? log_domain : "",
                                   level, message);
     }
@@ -5468,14 +5610,14 @@ console_log_handler(const char *log_domain, GLogLevelFlags log_level,
 #if defined(DEBUG_DUMPCAP) || defined(DEBUG_CHILD_DUMPCAP)
     if ( !(log_level & G_LOG_LEVEL_MASK & ~(G_LOG_LEVEL_DEBUG|G_LOG_LEVEL_INFO))) {
 #ifdef DEBUG_DUMPCAP
-        fprintf(stderr, "%s", msg);
+        fprintf(stderr, "%s", logmsg);
         fflush(stderr);
 #endif
 #ifdef DEBUG_CHILD_DUMPCAP
-        fprintf(debug_log, "%s", msg);
+        fprintf(debug_log, "%s", logmsg);
         fflush(debug_log);
 #endif
-        g_free(msg);
+        g_free(logmsg);
         return;
     }
 #endif
@@ -5483,12 +5625,12 @@ console_log_handler(const char *log_domain, GLogLevelFlags log_level,
     /* ERROR, CRITICAL, WARNING, MESSAGE messages goto stderr or    */
     /*  to parent especially formatted if dumpcap running as child. */
     if (capture_child) {
-        sync_pipe_errmsg_to_parent(2, msg, "");
+        sync_pipe_errmsg_to_parent(2, logmsg, "");
     } else {
-        fprintf(stderr, "%s", msg);
+        fprintf(stderr, "%s", logmsg);
         fflush(stderr);
     }
-    g_free(msg);
+    g_free(logmsg);
 }
 
 

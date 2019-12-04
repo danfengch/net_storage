@@ -1861,6 +1861,7 @@ void cgiHeaderStatus(int status, char *statusMessage) {
 }
 
 void cgiHeaderContentType(char *mimeType) {
+//    fprintf(cgiOut, "Cache-Control: no-cache; no-store\n");
 	fprintf(cgiOut, "Content-type: %s\r\n\r\n", mimeType);
 }
 

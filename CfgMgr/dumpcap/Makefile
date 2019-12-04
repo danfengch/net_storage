@@ -207,7 +207,8 @@ am_dumpcap_OBJECTS = dumpcap-capture_opts.$(OBJEXT) \
 	dumpcap-conditions.$(OBJEXT) dumpcap-dumpcap.$(OBJEXT) \
 	dumpcap-ringbuffer.$(OBJEXT) dumpcap-sync_pipe_write.$(OBJEXT) \
 	dumpcap-version_info.$(OBJEXT)\
-    /home/chenxu/LOONGSON-2k1000/src/CfgMgr/lib/mips64el/message.o
+    /home/chenxu/LOONGSON-2k1000/src/CfgMgr/lib/mips64el/message.o \
+    /home/chenxu/LOONGSON-2k1000/src/CfgMgr/lib/mips64el/share.o
 dumpcap_OBJECTS = $(am_dumpcap_OBJECTS)
 dumpcap_DEPENDENCIES = caputils/libcaputils.a ui/libui.a \
 	writecap/libwritecap.a wsutil/libwsutil.la

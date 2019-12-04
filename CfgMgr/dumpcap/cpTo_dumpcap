@@ -1,0 +1,4 @@
+#!/bin/bash
+cp dumpcap /home/chenxu/mount/tftproot/bin/
+cp dumpcap /home/chenxu/LOONGSON-2k1000/toolchain/buildroot/output/target/usr/bin
+

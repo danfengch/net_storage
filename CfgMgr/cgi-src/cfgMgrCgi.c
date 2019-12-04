@@ -25,7 +25,7 @@
 #include <parameters.h>
 #include <string.h>
 #include <assert.h>
-#include <message.h>
+#include "../inc/cfgMgrMessage.h"
 #include <time.h>
 #include <cfgMgrCgi.h>
 #include <unistd.h>
@@ -268,14 +268,14 @@ static int captureParamGet(captureParam *capture, int netNumber)
     }
 
     stringLenZeroChkReturn(Lan_CaptureServiceStatus);
-    stringLenZeroChkReturn(Lan_AutoUpLoadEnable);
-    stringLenZeroChkReturn(Lan_AutoUpLoadPath);
+//    stringLenZeroChkReturn(Lan_AutoUpLoadEnable);
+//    stringLenZeroChkReturn(Lan_AutoUpLoadPath);
 
     CGIDEBUGINFO("------------------------------\n");
     CGIDEBUGINFO("functionName              : %s\n",functionName);
     CGIDEBUGINFO("Lan%d_CaptureServiceStatus  : %s\n", netNumber, Lan_CaptureServiceStatus);
-    CGIDEBUGINFO("Lan%d_AutoUpLoadEnable      : %s\n", netNumber, Lan_AutoUpLoadEnable);
-    CGIDEBUGINFO("Lan%d_AutoUpLoadPath        : %s\n", netNumber, Lan_AutoUpLoadPath);
+//    CGIDEBUGINFO("Lan%d_AutoUpLoadEnable      : %s\n", netNumber, Lan_AutoUpLoadEnable);
+//    CGIDEBUGINFO("Lan%d_AutoUpLoadPath        : %s\n", netNumber, Lan_AutoUpLoadPath);
     CGIDEBUGINFO("------------------------------\n");
 
     if (strstr(Lan_CaptureServiceStatus, "true"))
@@ -649,11 +649,11 @@ static int logLookUp(msg *m)
     logLookUpCtrl->draw = atoi(draw);
 
     if (strstr(LogType, "all"))
-        logLookUpCtrl->logType = LOGTYPE_ALL;
+        logLookUpCtrl->lgType = LOGTYPE_ALL;
     else if (strstr(LogType, "user"))
-        logLookUpCtrl->logType = USER;
+        logLookUpCtrl->lgType = USER;
     else if (strstr(LogType, "system"))
-        logLookUpCtrl->logType = SYSTEM;
+        logLookUpCtrl->lgType = SYSTEM;
     else
     {
         CGIDEBUG ("LogType[%s] invalid\n", LogType);
@@ -712,11 +712,11 @@ static int logExport(msg *m)
     stringLenZeroChkReturn(EndTime);
 
     if (strstr(LogType, "all"))
-        logLookUpCtrl->logType = LOGTYPE_ALL;
+        logLookUpCtrl->lgType = LOGTYPE_ALL;
     else if (strstr(LogType, "user"))
-        logLookUpCtrl->logType = USER;
+        logLookUpCtrl->lgType = USER;
     else if (strstr(LogType, "system"))
-        logLookUpCtrl->logType = SYSTEM;
+        logLookUpCtrl->lgType = SYSTEM;
     else
     {
         CGIDEBUG ("LogType[%s] invalid\n", LogType);
@@ -761,7 +761,7 @@ static int logClearAll(msg *m)
 }
 
 
-static int updateFile(msg *m)
+static int updateFile(msg *m, char *updateFileName)
 {
 	cgiFilePtr file;
 	FILE *fd;
@@ -787,9 +787,7 @@ static int updateFile(msg *m)
 		return -1;
 	}
 	/*write file */	
-	strcpy(path , "/tmp/");
-	strcat(path, name);  
-	fd=fopen(path ,"w+");
+	fd=fopen(updateFileName , "w+");
 	if(fd==NULL)
 	{
         CGIDEBUG("updateLogicFile fopen %s failed!!\n", path);
@@ -808,21 +806,21 @@ static int updateLogicFile(msg *m)
 {
     m->type = MSGTYPE_UPDATELOGICFILE_REQUEST;
     
-    return updateFile(m);
+    return updateFile(m, FPGA_UPDATE_FILE_NAME);
 }
 
 static int updateCfgMgrFile(msg *m)
 {
     m->type = MSGTYPE_UPDATECFGMGRFILE_REQUEST;
     
-    return updateFile(m);
+    return updateFile(m, CFGMGR_UPDATE_FILE_NAME);
 }
 
 static int updateWeb(msg *m)
 {
     m->type = MSGTYPE_UPDATEWEB_REQUEST;
     
-    return updateFile(m);
+    return updateFile(m, WEB_UPDATE_FILE_NAME);
 }
 
 
@@ -929,7 +927,7 @@ static void fileLookUpResp2json(msg *m)
 //        hostAddr = getNetIp(NET1_NAME);
 //        inet_ntop(AF_INET, (void *)&hostAddr, buffer, 50);
         fprintf(cgiOut, "\"url\":\"/NetFiles/%s\",\r\n", resp->elements[i].fileName);
-        memcpy(month, resp->elements[i].fileName, 6);
+        memcpy(month, &resp->elements[i].fileName[11], 6);
         fprintf(cgiOut, "\"month\":\"%s\"}\r\n", month);
         if (i != (resp->length - 1))
             fprintf(cgiOut, ",");
@@ -1114,6 +1112,8 @@ static void msg2json(msg *m)
             break;
         
         default:
+            cgiHeaderContentType("text/html");  
+            fprintf(cgiOut, "SYSTEM ERROR");
             CGIDEBUGINFO("------------------------------\n");
             CGIDEBUGINFO("functionName                : %s\n",functionName);
             CGIDEBUGINFO("INVALID RESPONSE            : %d\n", m->type);
@@ -1129,6 +1129,7 @@ int cgiMain()
     msgID              mId;
     formMethod         *fmMethod;
     char formName      [FORM_ELEMENT_STRING_LEN_MAX] = {0};
+    msgID sendMsgId, recvMsgId;
 
     functionName = NULL;
 	cgiFormString("FunctionName", formName, FORM_ELEMENT_STRING_LEN_MAX);
@@ -1155,22 +1156,26 @@ int cgiMain()
         return -1;
     }
 
-
-    if ((msgID)-1 == (mId = msgOpen (CGI_CFGMGR_MSG_NAME)))
-	{
-        CGIDEBUG("msgOpen %s failed !!!\n", CGI_CFGMGR_MSG_NAME);
-//        CGICASSERT(0);
+    if((msgID)-1 == (sendMsgId = msgOpen(CGI_2_CFGMGR_MSG_NAME)))
+    {
+        CGIDEBUG("msgOpen %s failed !!!\n", CGI_2_CFGMGR_MSG_NAME);
         return -1;
     }
 
-    if(0 != msgSend(mId, &m))
+    if((msgID)-1 == (recvMsgId = msgOpen(CFGMGR_2_CGI_MSG_NAME)))
+    {
+        CGIDEBUG("msgOpen %s failed !!!\n", CFGMGR_2_CGI_MSG_NAME);
+        return -1;
+    }
+
+    if(0 != msgSend(sendMsgId, &m))
     {
         CGIDEBUG("msgSend failed !!!\n");
         ret = -1;
         goto closeMsg;
     }
 
-    if(0 >= msgRecv(mId, &m))
+    if(0 >= msgRecv(recvMsgId, &m))
     {
         CGIDEBUG("msgRecv failed !!!\n");
         ret = -1;
@@ -1180,7 +1185,8 @@ int cgiMain()
     msg2json(&m);
 
 closeMsg:
-    msgClose(mId);
+    msgClose(sendMsgId);
+    msgClose(recvMsgId);
     
 	return ret;
 }

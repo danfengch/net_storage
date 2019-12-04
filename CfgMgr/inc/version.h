@@ -18,7 +18,7 @@
 #define __VERSION_H__
 
 #define CFGMGR_MAJOR            1
-#define CFGMGR_MINOR            5
+#define CFGMGR_MINOR            13
 
 
 #endif
