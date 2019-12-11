@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>修改密码</title>
+    <link rel="stylesheet" href="./css/validate_style.css" type="text/css" media="all" />
+    <link rel="stylesheet" type="text/css" href="css/switch.css">
+    <script src="./js/jquery-1.11.3.min.js"></script>
+    <script src="./js/jquery.form.js"></script>
+    <script src="./js/Validform_v5.3.2_min.js"></script>
+    <script src="./js/Validform_Datatype.js"></script>
+    <script src="./js/jquery.cookie.js"></script>
+    <script src="./js/login.js"></script>
+
+    <style type="text/css">
+        .content {
+            margin-left: 50px;
+            margin-top: 30px;
+        }
+    </style>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            check_login_status();
+            $("#logout").click(function(){
+                $.removeCookie('login_UserName');
+                $.removeCookie('login_UserPws');
+                $.removeCookie('login_Status');
+                window.top.location='login.htm';
+            })
+        });
+    </script>
+</head>
+
+<body>
+    <h2 class="tab" mark="vlan_port">系统退出</h2>
+    <div class="npe_txt">
+        <div class="npe_tips">
+            <p><strong mark="note" transtag="illustration:">说明：</strong> </p>
+            <label mark="note_content" transtag="ag_illustration">（1）注销后页面需重新登录。<br /></label>
+        </div>
+        <p>
+            <h3>注销登录</h3>
+        </p>
+    </div>
+    <div class="content">
+        <input type="button" class="blue_button" value="注销"
+				id="logout"" style="width:120px;height:45px;font-weight: bold">
+    </div>
+</body>
+
+</html>

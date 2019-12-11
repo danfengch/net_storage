@@ -1,0 +1,14 @@
+OccurTime                LogType   Significance   Content                                           
+------------------------------------------------------------------------------------
+2019-10-23 12:34:04      user      genarl         Log Look Up start                                 
+2019-10-23 12:34:04      user      genarl         Log Look Up succ                                  
+2019-10-23 12:34:22      user      genarl         Log Look Up start                                 
+2019-10-23 12:34:22      user      genarl         Log Look Up succ                                  
+2019-10-23 12:34:24      user      genarl         Log Look Up start                                 
+2019-10-23 12:34:24      user      genarl         Log Look Up succ                                  
+2019-10-23 12:34:25      user      genarl         Log Look Up start                                 
+2019-10-23 12:34:25      user      genarl         Log Look Up succ                                  
+2019-10-23 12:34:25      user      genarl         Log Look Up start                                 
+2019-10-23 12:34:26      user      genarl         Log Look Up succ                                  
+2019-10-23 12:34:36      user      genarl         Log Look Up start                                 
+2019-10-23 12:34:36      user      genarl         Log Look Up succ                                  

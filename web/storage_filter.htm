@@ -1,0 +1,145 @@
+<!DOCTYPE html
+	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<script type="text/javascript">
+	</script>
+	<title>过滤控制</title>
+	<link rel="stylesheet" type="text/css" href="css/switch.css">
+	<link rel="stylesheet" href="./css/validate_style.css" type="text/css" media="all" />
+	<style type="text/css">
+		.chooseBtn {
+			display: none;
+			/*input不可见，实际只用到了lable*/
+		}
+		.choose-label {
+			box-shadow: #ccc 0px 0px 0px 1px;
+			width: 52px;
+			/*长条长度*/
+			height: 23px;
+			/*长条高度*/
+			display: inline-block;
+			border-radius: 20px;
+			position: relative;
+			background-color: #bdbdbd;
+			overflow: hidden;
+		}
+		/*小圆点*/
+		.choose-label:before {
+			content: '';
+			position: absolute;
+			left: 0;
+			width: 22px;
+			/*圆点半径*/
+			height: 22px;
+			/*圆点半径*/
+			display: inline-block;
+			border-radius: 20px;
+			background-color: #fff;
+			z-index: 20;
+			-webkit-transition: all 0.5s;
+			transition: all 0.5s;
+		}
+		.chooseBtn:checked+label.choose-label:before {
+			left: 30px;
+			/*圆点距离左边的距离，设置长条的一半较好*/
+		}
+		.chooseBtn:checked+label.choose-label {
+			background-color: #3CB371;
+			/*绿色*/
+		}
+	</style>
+	<script src="./js/jquery-1.11.3.min.js"></script>
+	<script src="./js/jquery.form.js"></script>
+	<script src="./js/Validform_v5.3.2_min.js"></script>
+	<script src="./js/Validform_Datatype.js"></script>
+	<script src="./js/jquery.cookie.js"></script>
+	<script src="./js/login.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function () {
+			check_login_status();
+			load_system_info();
+			$("#NetFilterSave").click(function () {
+				$.ajax({
+					type: "GET",
+					url: "cgi-bin/cfgMgrCgi.cgi",
+					dataType: "json",
+					cache: false,
+					data: {
+						FunctionName: "Function_NetFilter",
+						Lan1_NetFilterServiceStatus: $("#Lan1_NetFilterServiceStatus").is(':checked').toString(),
+						Lan2_NetFilterServiceStatus: $("#Lan2_NetFilterServiceStatus").is(':checked').toString()
+					},
+					success: function (result) {
+						if (result.status == 0) {
+							alert("保存成功");
+						} else {
+							alert(result.message);
+						}
+					},
+					error: function (result) {
+						alert(result);
+					}
+				});
+			})
+		})
+	</script>
+	<script type="text/javascript">
+		function load_system_info() {
+			$.ajax({
+				type: "GET",
+				url: "./cfg/config.xml",
+				dataType: "xml",
+				cache: false,
+				error: function (XMLHttpRequest, textStatus, errorThrown) {
+					alert("Can't load user information from the system. XMLHttpRequest.status="
+						+ XMLHttpRequest.status + ",XMLHttpRequest.readyState=" + XMLHttpRequest.readyState);
+				},
+				success: function (userXML) {
+					var Lan1_NetFilterServiceStatus = $(userXML).find("Lan1_NetFilterServiceStatus").text();
+					var Lan2_NetFilterServiceStatus = $(userXML).find("Lan2_NetFilterServiceStatus").text();
+					$("#Lan1_NetFilterServiceStatus").prop("checked", eval(Lan1_NetFilterServiceStatus));
+					$("#Lan2_NetFilterServiceStatus").prop("checked", eval(Lan2_NetFilterServiceStatus));
+					// 对checkbox的操作
+					// $("#obj").prop("checked", true)
+					// $("#obj").is(':checked');
+				}
+			})
+		}
+	</script>
+</head>
+<body>
+	<h2 class="tab" mark="vlan_port">存储管理</h2>
+	<div class="npe_txt">
+	  <div class="npe_tips">
+			<p><strong mark="note" transtag="illustration:">说明：</strong> </p>
+	    <label mark="note_content"
+				transtag="ag_illustration">（1）此页面可配置过滤的开启和关闭，开启后网口上的FRT报文将被过滤掉，过滤关闭后FRT报文将进入网卡；		  </label>
+		</div>
+		<p>
+			<h3 mark="User">过滤控制</h3>
+		</p>
+	</div>
+	<div class="maincontent" style="margin-left: 50px;margin-top: 30px;">
+		<div>
+			<p style="vertical-align:middle;display: inline-block;font-size: 15px">网络一过滤服务：</p>
+			<div class="switch" style="display: inline-block;vertical-align:middle">
+				<input type="checkbox" name="Lan1_NetFilterServiceStatus" id="Lan1_NetFilterServiceStatus"
+					class="chooseBtn" />
+				<label for="Lan1_NetFilterServiceStatus" class="choose-label"></label>
+			</div>
+		</div>
+		<div style="margin-top: 30px">
+			<p style="vertical-align:middle;display: inline-block;font-size: 15px">网络二过滤服务：</p>
+			<div class="switch" style="display: inline-block;vertical-align:middle">
+				<input type="checkbox" name="Lan2_NetFilterServiceStatus" id="Lan2_NetFilterServiceStatus"
+					class="chooseBtn" />
+				<label for="Lan2_NetFilterServiceStatus" class="choose-label"></label>
+			</div>
+		</div>
+		<div style="margin-top: 30px;padding-left:50px"><input type="button" class="blue_button" value="保存"
+				id="NetFilterSave" style="width:50px;height:30px;"></div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>高级管理</title>
+    <link rel="stylesheet" href="./css/validate_style.css" type="text/css" media="all" />
+    <link rel="stylesheet" href="./css/bootstrap.min.css" type="text/css" />
+    <link rel="stylesheet" href="./css/dataTables.bootstrap.min.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="css/switch.css">
+    <link rel="stylesheet" type="text/css" href="./plugin/webuploader-0.1.5/webuploader.css">
+    <style type="text/css">
+        .content {
+            margin-left: 50px;
+            margin-top: 30px;
+        }
+
+        .table th {
+            text-align: center;
+            vertical-align: middle !important;
+        }
+
+        .webuploader-pick {
+            padding: 5px 10px;
+        }
+
+        .progress {
+            margin-bottom: 0px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2 class="tab" mark="vlan_port">系统维护</h2>
+    <div class="npe_txt">
+        <div class="npe_tips">
+            <p><strong mark="note" transtag="illustration:">说明：</strong> </p>
+            <label mark="note_content" transtag="ag_illustration"> </label>（1）此页面实现对数据处理单元和配置管理单元的升级 ；<br/>
+                （2）初始进入此页面时 ，页面向配置管理单元请求数据处理单元和配置管理单元的版本信息；<br/>
+                （3）用户升级前 ，需填写升级文件版本号，以及升级文件存放路径 ，填写完毕后单击对应“开始升级 ”按钮；<br/>
+                （4）执行恢复出厂设置后 ，系统配置将恢复的出厂默认配置 ；<br/>
+        </div>
+    </div>
+    <div class="npe_txt">
+        <p>
+            <h3 mark="User">系统升级</h3>
+        </p>
+        <div>
+            <table class="table table-bordered"
+                style="width: 85%;margin-top: 10px;margin-bottom: 10px;margin-left: 10px;text-align: center;">
+                <tr>
+                    <th style="width: 10%">升级目标</th>
+                    <th style="width: 10%">当前版本</th>
+                    <th style="width: 20%">升级文件版本</th>
+                    <th style="width: 26%">升级文件</th>
+                    <th>升级进度</th>
+                    <th style="width: 13%">操作</th>
+                </tr>
+                <tr>
+                    <td>数据处理单元</td>
+                    <td><span id="logic_cur_version"></span></td>
+                    <td><input type="text" id="logic_update_version" /></td>
+                    <td style="text-align: right;">
+                        <div id="logic_list" class="uploader-list" style="float: left;margin-top:5px;font-weight: bold">
+                        </div>
+                        <p id="logic_picker">选择文件</p>
+                        <!-- <div style="float: right"><button id="logic_choose" class="blue_button"
+                                style="padding: 3px 6px 3px 6px;">选择文件</button></div> -->
+                    </td>
+                    <td style="width: 200px">
+                        <div class="progress">
+                            <div id="logic_progress_bar" class="progress-bar" role="progressbar" aria-valuenow="60"
+                                aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+                                <span id="logic_finish">0% 完成</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <button id="logic_sure" onClick="logic_sure()" class="webuploader-pick">开始升级</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>配置管理单元</td>
+                    <td><span id="mgr_cur_version"></span></td>
+                    <td><input type="text" id="mgr_update_version" /></td>
+                    <td style="text-align: right;">
+                        <div id="mgr_list" class="uploader-list" style="float: left;margin-top:5px;font-weight: bold">
+                        </div>
+                        <p id="mgr_picker">选择文件</p>
+                        <!-- <div style="float: right"><button id="logic_choose" class="blue_button"
+                                style="padding: 3px 6px 3px 6px;">选择文件</button></div> -->
+                    </td>
+                    <td style="width: 200px">
+                        <div class="progress">
+                            <div id="mgr_progress_bar" class="progress-bar" role="progressbar" aria-valuenow="60"
+                                aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+                                <span id="mgr_finish">0% 完成</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td><button id="mgr_sure" onClick="mgr_sure()" class="webuploader-pick">开始升级</button></td>
+                </tr>
+            </table>
+        </div>
+        <p>
+            <h3 mark="User">恢复出厂设置</h3>
+        </p>
+        <div class="content" style="height: 100px">
+            <input type="button" class="blue_button" value="恢复出厂设置" id="reset"" onclick=" reset()"
+                style="width:120px;height:45px;font-weight: bold">
+        </div>
+        <p>
+            <h3 mark="User">重启</h3>
+        </p>
+        <div class="content" style="height: 100px">
+            <input type="button" class="blue_button" value="重启" id="reboot"" onclick=" reboot()"
+                style="width:120px;height:45px;font-weight: bold">
+        </div>
+    </div>
+</body>
+<script src="./js/jquery-1.11.3.min.js"></script>
+<script src="./js/jquery.cookie.js"></script>
+<script src="./js/login.js"></script>
+<script src="./plugin/webuploader-0.1.5/webuploader.js"></script>
+<script src="./plugin/layer/layer.js"></script>
+<!–[if IE]>
+    <script src="./js/html5shiv.js"></script>
+    <script src="https://cdn.bootcss.com/es6-promise/4.1.1/es6-promise.auto.min.js"></script>
+    <![endif]–>
+<script type="text/javascript">
+    var logic_cur_file;
+    var mgr_cur_file;
+    var resultStatuss;
+
+    $(document).ready(function () {
+        check_login_status();
+        load_info();
+        $("#logic_choose").click(function () {
+            $("#logic_picker").find('input').click();
+        });
+    });
+
+    var uploader = WebUploader.create({
+        swf: './plugin/webuploader-0.1.5/Uploader.swf',// swf文件路径
+        // swf:'http://fex.baidu.com/webuploader/js/Uploader.swf',
+        // 文件接收服务端。
+        server: '/cgi-bin/cfgMgrCgi.cgi',
+        pick: { id: '#logic_picker', multiple: true },
+        // fileNumLimit: 1,
+        method: 'POST',
+        fileVal: 'UpdateFileName',
+        formData: { "FunctionName": "Function_UpdateLogicFile" }
+    });
+
+    uploader.on('fileQueued', function (file) {
+        // $("#logic_list").append('<div id="' + file.id + '" class="item">' +
+        //     '<h4 class="info">' + file.name + '</h4>' +
+        //     '</div>');
+        if (logic_cur_file != null) {
+            uploader.removeFile(logic_cur_file, true);
+        }
+        $("#logic_list").html(file.name);
+        $("#logic_progress_bar").css("width", 0 + "%");
+        $('#logic_finish').html(0 + "%完成");
+        logic_cur_file = file;
+    });
+
+    uploader.on('uploadProgress', function (file, percentage) {
+        var num = percentage * 100;
+        num = num.toFixed(2);
+        $("#logic_progress_bar").css("width", num + "%");
+        $('#logic_finish').html(num + "%完成");
+    });
+
+    uploader.on('uploadSuccess', function (file) {
+        uploader.removeFile(file, true);
+        alert("上传完毕");
+    });
+
+    uploader.on('uploadError', function (file) {
+        uploader.removeFile(file, true);
+        alert("上传出错");
+    });
+
+    uploader.on('uploadFinished', function () {
+        //清空队列
+        $("#logic_list").html("");
+        uploader.reset();
+    });
+
+
+    var mgr_uploader = WebUploader.create({
+        swf: './plugin/webuploader-0.1.5/Uploader.swf',// swf文件路径
+        // swf:'http://fex.baidu.com/webuploader/js/Uploader.swf',
+        // 文件接收服务端。
+        server: '/cgi-bin/cfgMgrCgi.cgi',
+        pick: { id: '#mgr_picker', multiple: true },
+        // fileNumLimit: 1,
+        method: 'POST',
+        fileVal: 'UpdateFileName',
+        formData: { "FunctionName": "Function_UpdateCfgMgrFile" }
+    });
+
+    mgr_uploader.on('beforeFileQueued', function (file) {
+        // $("#logic_list").append('<div id="' + file.id + '" class="item">' +
+        //     '<h4 class="info">' + file.name + '</h4>' +
+        //     '</div>');
+        mgr_uploader.reset();
+        return true;
+    });
+
+    mgr_uploader.on('fileQueued', function (file) {
+        // $("#logic_list").append('<div id="' + file.id + '" class="item">' +
+        //     '<h4 class="info">' + file.name + '</h4>' +
+        //     '</div>');
+        if (mgr_cur_file != null) {
+            mgr_uploader.removeFile(mgr_cur_file, true);
+        }
+        $("#mgr_list").html(file.name);
+        $("#mgr_progress_bar").css("width", 0 + "%");
+        $('#mgr_finish').html(0 + "%完成");
+        mgr_cur_file = file;
+    });
+
+    mgr_uploader.on('uploadProgress', function (file, percentage) {
+        var num = percentage * 100;
+        num = num.toFixed(2);
+        $("#mgr_progress_bar").css("width", num + "%");
+        $('#mgr_finish').html(num + "%完成");
+    });
+
+    mgr_uploader.on('uploadSuccess', function (file) {
+        mgr_uploader.removeFile(file, true);
+        alert("上传完毕");
+    });
+
+    mgr_uploader.on('uploadError', function (file) {
+        mgr_uploader.removeFile(file, true);
+        alert("上传出错");
+    });
+
+    mgr_uploader.on('uploadFinished', function () {
+        //清空队列
+        $("#mgr_list").html("");
+        mgr_uploader.reset();
+    });
+
+
+    function logic_sure() {
+        if ($("#logic_update_version").val() == "") {
+            alert("请输入升级文件版本");
+            return false;
+        }
+        if ($("#logic_update_version").val() == $("#logic_cur_version").html()) {
+            alert("升级版本与当前版本一致，请校对");
+            return false;
+        }
+        layer.prompt({ title: '输入管理员密码', formType: 1 }, function (pass, index) {
+            layer.close(index);
+            resultStatus = 1;
+            isAdmin(pass);
+            if (resultStatus == 0) {
+                uploader.upload();
+            }
+        });
+
+    }
+
+    function mgr_sure() {
+        if ($("#mgr_update_version").val() == "") {
+            alert("请输入升级文件版本");
+            return false;
+        }
+        if ($("#mgr_update_version").val() == $("#mgr_cur_version").html()) {
+            alert("升级版本与当前版本一致，请校对");
+            return false;
+        }
+        layer.prompt({ title: '输入管理员密码', formType: 1 }, function (pass, index) {
+            layer.close(index);
+            resultStatus = 1;
+            isAdmin(pass);
+            if (resultStatus == 0) {
+                mgr_uploader.upload();
+            }
+        });
+
+    }
+
+    function load_info() {
+        $.ajax({
+            type: "GET",
+            url: "cgi-bin/cfgMgrCgi.cgi",
+            dataType: "json",
+            data: {
+                FunctionName: "Function_GetVersion",
+                times:new Date().getTime()
+            },
+            success: function (result) {
+                $("#logic_cur_version").html(result.LogicVersion);
+                $("#mgr_cur_version").html(result.CfgMgrVersion);
+            },
+            error: function (result) {
+                alert(result.message);
+            }
+        });
+    }
+
+
+    function isAdmin(pw) {
+        $.ajax({
+            type: "GET",
+            url: "cgi-bin/cfgMgrCgi.cgi",
+            async: false,
+            dataType: "json",
+            data: {
+                FunctionName: "Function_AdminPasswdConfirm",
+                AdminPasswd: pw,
+                times:new Date().getTime()
+            },
+            success: function (result) {
+                if (result.status == 0) {
+                    resultStatus = 0;
+                } else {
+                    alert("密码错误");
+                }
+            },
+            error: function (result) {
+                alert("密码错误");
+            }
+        });
+    }
+
+    function reset() {
+        layer.prompt({ title: '输入管理员密码', formType: 1 }, function (pass, index) {
+            layer.close(index);
+            resultStatus = 1;
+            isAdmin(pass);
+            if (resultStatus == 0) {
+                $.ajax({
+                    type: "GET",
+                    url: "cgi-bin/cfgMgrCgi.cgi",
+                    dataType: "json",
+                    data: {
+                        FunctionName: "Function_FactoryReset",
+                        times:new Date().getTime()
+                    },
+                    success: function (result) {
+                        if (result.status == 0) {
+                            alert("设置成功");
+                            $.removeCookie('login_UserName');
+                            $.removeCookie('login_UserPws');
+                            $.removeCookie('login_Status');
+                            window.top.location = 'login.htm';
+                        } else {
+                            alert(result.message);
+                        }
+                    },
+                    error: function (result) {
+                        alert(result.message);
+                    }
+                });
+            }
+        });
+    }
+
+    function reboot() {
+        layer.prompt({ title: '输入管理员密码', formType: 1 }, function (pass, index) {
+            layer.close(index);
+            resultStatus = 1;
+            isAdmin(pass);
+            if (resultStatus == 0) {
+                $.ajax({
+                    type: "GET",
+                    url: "cgi-bin/cfgMgrCgi.cgi",
+                    dataType: "json",
+                    data: {
+                        FunctionName: "Function_Reboot",
+                        times:new Date().getTime()
+                    },
+                    success: function (result) {
+                        if (result.status == 0) {
+                            alert("重启成功");
+                            $.removeCookie('login_UserName');
+                            $.removeCookie('login_UserPws');
+                            $.removeCookie('login_Status');
+                            window.top.location = 'login.htm';
+                        } else {
+                            alert(result.message);
+                        }
+                    },
+                    error: function (result) {
+                        alert(result.message);
+                    }
+                });
+            }
+        });
+    }
+
+
+</script>
+
+</html>

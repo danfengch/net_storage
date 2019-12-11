@@ -1,0 +1,722 @@
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName                : Function_Login
+UserName                    : admin
+Passwd                      : 1
+------------------------------
+------------------------------
+functionName                : Function_Login
+INVALID RESPONSE            : 1
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName                : Function_Login
+UserName                    : admin
+Passwd                      : 1
+------------------------------
+------------------------------
+functionName                : Function_Login
+INVALID RESPONSE            : 1
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName                : Function_Login
+UserName                    : admin
+Passwd                      : 1
+------------------------------
+------------------------------
+functionName                : Function_Login
+INVALID RESPONSE            : 1
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName                : Function_Login
+UserName                    : admin
+Passwd                      : 1
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName                : Function_Login
+UserName                    : admin
+Passwd                      : 1
+------------------------------
+------------------------------
+functionName                : Function_Login
+INVALID RESPONSE            : 1
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName              : Function_NetCapture
+Lan1_CaptureServiceStatus  : true
+Lan1_AutoUpLoadEnable      : true
+Lan1_AutoUpLoadPath        : testpath
+------------------------------
+------------------------------
+functionName              : Function_NetCapture
+Lan2_CaptureServiceStatus  : true
+Lan2_AutoUpLoadEnable      : true
+Lan2_AutoUpLoadPath        : testpath
+------------------------------
+1248
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName                : Function_FileLookUp
+INVALID RESPONSE            : 7
+------------------------------
+1248
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName                : Function_FileLookUp
+INVALID RESPONSE            : 7
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName                : Function_Login
+UserName                    : admin
+Passwd                      : 1
+------------------------------
+1248
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName                : Function_FileLookUp
+INVALID RESPONSE            : 7
+------------------------------
+1248
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName                : Function_FileLookUp
+INVALID RESPONSE            : 7
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName                : Function_Login
+UserName                    : admin
+Passwd                      : 1
+------------------------------
+1248
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName                : Function_FileLookUp
+INVALID RESPONSE            : 7
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName                  : Function_SystemTimeSet
+CorrectTime                   : 2019-11-03 16:20:06
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+1269
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName : Function_LogLookUp
+LogType      : all
+Significance : all
+StartTime    : 2019-11-03 00:00:00
+EndTime      : 2019-11-03 16:21:23
+start        : 0
+length       : 10
+draw         : 1
+------------------------------
+1270
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName : Function_LogLookUp
+LogType      : all
+Significance : all
+StartTime    : 2019-11-03 00:00:00
+EndTime      : 2019-11-03 16:21:23
+start        : 10
+length       : 10
+draw         : 2
+------------------------------
+1270
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName : Function_LogLookUp
+LogType      : all
+Significance : all
+StartTime    : 2019-11-03 00:00:00
+EndTime      : 2019-11-03 16:21:23
+start        : 20
+length       : 10
+draw         : 3
+------------------------------
+1270
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName : Function_LogLookUp
+LogType      : all
+Significance : all
+StartTime    : 2019-11-03 00:00:00
+EndTime      : 2019-11-03 16:21:23
+start        : 30
+length       : 10
+draw         : 4
+------------------------------
+1270
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName : Function_LogLookUp
+LogType      : all
+Significance : all
+StartTime    : 2019-11-03 00:00:00
+EndTime      : 2019-11-03 16:21:23
+start        : 40
+length       : 10
+draw         : 5
+------------------------------
+1270
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName : Function_LogLookUp
+LogType      : all
+Significance : all
+StartTime    : 2019-11-03 00:00:00
+EndTime      : 2019-11-03 16:21:23
+start        : 50
+length       : 10
+draw         : 6
+------------------------------
+1270
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName : Function_LogLookUp
+LogType      : all
+Significance : all
+StartTime    : 2019-11-03 00:00:00
+EndTime      : 2019-11-03 16:21:23
+start        : 60
+length       : 10
+draw         : 7
+------------------------------
+1270
+POST
+application/x-www-form-urlencoded
+POST recognized
+Calling PostFormInput
+PostFormInput succeeded
+------------------------------
+functionName : Function_LogLookUp
+LogType      : all
+Significance : all
+StartTime    : 2019-11-03 00:00:00
+EndTime      : 2019-11-03 16:21:23
+start        : 70
+length       : 10
+draw         : 8
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName                : Function_Login
+UserName                    : admin
+Passwd                      : 1
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+------------------------------
+functionName                  : Function_SystemTimeSet
+CorrectTime                   : 2019-11-03 16:42:24
+------------------------------
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded
+0
+GET
+
+GetFormInput succeeded

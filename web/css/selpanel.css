@@ -1,0 +1,38 @@
+/* 面板样式start*/
+.simple_panel{width:738px;height:86px;border:2px solid #444444;	padding:1px;position:relative;font:normal 12px/18px Arial, Helvetica, sans-serif, "新宋体";}
+.simple_panel .panel_tip{position: absolute;right: 1px;top:3px;display: block;width:14x;height: 14px;
+
+ border:0px;
+}
+.simple_panel .innerBox{border:1px solid #444444;padding: 0px;}
+.simple_panel td{width:28px;text-align:center;height: 42px;}
+.simple_panel .port div{width:20px;	height:17px;margin:auto;cursor:pointer;text-align:center;vertical-align: middle;font-size:12px;font-weight:bold; }	
+.simple_panel .up div{margin-bottom:2px;background: url(../img/intf.gif) -44px 0px;}
+.simple_panel .up .disabled{background: url(../img/intf.gif) 0px 0px;cursor:auto;color:#ffffff;}
+.simple_panel .up .ui-selected,.simple_panel .up .ui-selecting{background: url(../img/intf.gif) -114px -21px; color:#ffffff;}
+
+.simple_panel .down div{margin-top:2px;background: url(../img/intf.gif) -44px -22px;}
+.simple_panel .down .disabled{background: url(../img/intf.gif) 0px -22px;cursor:auto;color:#ffffff;}
+.simple_panel .down .ui-selected,.simple_panel .down .ui-selecting{background: url(../img/intf.gif) -90px -22px;color:#ffffff;}
+
+.simple_panel .f_port div{width:21px;height:15px;margin:auto;background: url(../img/intf.gif) -137px -2px;cursor:pointer;font-size:12px;font-weight:bold; }
+.simple_panel .f_port .disabled{background: url(../img/intf.gif) -89px -2px;cursor:auto;color:#ffffff;}	
+.simple_panel .f_port .ui-selected,.simple_panel .f_port .ui-selecting{background: url(../img/intf.gif) -137px -22px;color:#ffffff;}	
+
+/* 面板样式end*/
+
+/* 端口样式示例*/	
+.panel_bars{padding-top:4px;width:800px;height:32px;}
+.panel_bars li{float:left;padding-right:7px;}
+.panel_bars div{width:20px;height:17px;float:left;margin-right:3px;font-size:12px;font-weight:bold; text-align:center;line-height: 17px;}
+.panel_bars div.normal , .panel_bars div.ap,.panel_bars div.trunk{background: url(../img/intf.gif) -44px 0px;}
+.panel_bars div.disabled{background: url(../img/intf.gif) 0px 0px;}
+.panel_bars div.selected{background: url(../img/intf.gif) -114px -21px; }
+
+.panel_bars li.btns{float: left;margin-right:0px;padding-right: 0px;}
+.panel_bars li button{height:26px; border:1px solid #fff; border-bottom: 1px solid #b5b5b5; vertical-align:middle;
+border-right: 1px solid #b5b5b5;color:#FFF; background:#1b72af; overflow:visible; padding:0px 15px;margin-right:5px;font-family:Arial; font-size:10px; } /*1b72af*/
+
+.panel_btn{margin-left:5px;margin-right: 5px;}
+
+

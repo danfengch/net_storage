@@ -1,0 +1,215 @@
+<!DOCTYPE html
+	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>用户登录</title>
+	<!--<link rel="stylesheet" href="./css/validate_app.css" type="text/css" media="all" />-->
+	<link rel="stylesheet" href="./css/validate_style.css" type="text/css" media="all" />
+	<link rel="stylesheet" type="text/css" href="css/switch.css">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<script src="./js/jquery-1.11.3.min.js"></script>
+	<script src="./js/jquery.form.js"></script>
+	<script src="./js/Validform_v5.3.2_min.js"></script>
+	<script src="./js/Validform_Datatype.js"></script>
+	<script src="./js/jquery.cookie.js"></script>
+	<style>
+		body {
+			background-image: url(./img/login_bg.png);
+			background-repeat: no-repeat;
+			background-position: top right;
+			overflow: hidden;
+			background-size: 100%,100%;
+		}
+
+		div.login {
+			padding-top: 50px;
+			background: #d2e3c7;
+			position: absolute;
+			left: 75%;
+			top: 60%;
+			margin-left: -300px;
+			margin-top: -170px;
+			width: 530px;
+			height: 280px;
+			text-align: left;
+			z-index: 4;
+		}
+
+		select {
+			width: 100px;
+		}
+
+		input.text {
+			width: 150px;
+		}
+
+		strong {
+			color: #006699;
+		}
+
+		td.small {
+			font-size: 11px;
+			color: #666666
+		}
+
+		.foot {
+			font-size: 12px;
+			line-height: 28px;
+			width: 100%;
+			z-index: 3;
+			text-align: center;
+			background: #EEF2F2 url(./img/topfoot_bg.gif) no-repeat center -76px;
+			height: 29px;
+			border-top: 2px solid #96AE64;
+			color: #1B62A4;
+			position: absolute;
+			bottom: 0px;
+		}
+
+		.online {
+			display: inline-block;
+			width: 130px;
+			text-align: left;
+			padding-left: 26px;
+			background: url(./img/free_comments.png) no-repeat 6px 5px;
+		}
+
+		.online:link,
+		.online:visited {
+			color: #4f8f02
+		}
+
+		.online_zh {
+			width: 80px;
+		}
+
+		.online_cn {
+			display: block;
+			background: url(./img/free_online.gif) no-repeat 0 -50px;
+			width: 161px;
+			height: 49px;
+		}
+
+		.online_en {
+			display: block;
+			background: url(./img/free_online.gif) no-repeat 0 0;
+			width: 161px;
+			height: 49px;
+		}
+
+		.switch_butt {
+			background: url(./img/menu_bg.gif) repeat-x 0 -97px;
+			color: #333;
+			text-align: center;
+			border: 1px solid #adadad;
+			line-height: 20px;
+			padding: 0 8px;
+			margin-top: 15px
+		}
+
+		.line_text {
+			width: 200px;
+			white-space: nowrap;
+			word-break: break-all;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	</style>
+	<script type="text/javascript">
+		$(document).ready(function () {
+			$(function () {
+				//$(".login_mgr").Validform();
+				login_form = $("#login_mgr").Validform({
+					tiptype: 2,
+					showAllError: true
+				});
+			})
+			$("#btn_login").click(function () {
+				if (login_form.check()) {
+					login();
+					return false;	//打开此注释，可阻止页面自动刷新     
+				}
+			});
+		})
+		//读出用户信息
+		function login() {
+			$.ajax({
+				type: "GET",
+				url: "cgi-bin/cfgMgrCgi.cgi",
+				dataType: "json",
+				cache: false,
+				data: {
+					FunctionName: "Function_Login",
+					UserName: $("#UserName").val(),
+					Passwd: $("#UserPws").val()
+				},
+				success: function (result) {
+					if (result.status == 0) {
+						alert("登录成功！");
+						var timeout = new Date();
+						timeout.setTime(timeout.getTime() + (100 * 60 * 1000));//10分钟 
+						$.cookie('login_UserName', $("#UserName").val(), { expires: timeout });
+						$.cookie('login_Status', true, { expires: timeout });
+						location.href = 'main.htm';
+					} else {
+						alert(result.message);
+					}
+				},
+				error: function (result) {
+					alert(result.message);
+				}
+			})
+		}
+	</script>
+</head>
+
+<body>
+	<p>&nbsp;</p>
+	<div class="login">
+		<table width="100%" border='0'>
+			<tr>
+				<!-- <td width="160" valign="middle"> </td>
+				<td width="8"><img src="./img/free_login_ge.gif" /></td> -->
+				<td>
+					<dir style="margin-left:25px;margin-top:10px;"> </dir>
+					<div style="margin-left:25px;margin-top:5px;"><img src="./img/free_login_ico.gif" /><strong>
+							<label transtag="">用户登录</label>
+						</strong></div>
+					<br>
+					<form id="login_mgr" name="login_mgr">
+						<table style="margin-left:50px;width:100%;">
+							<tr>
+								<td height="40" colspan="2" class="small"><label transtag="">请输入用户名和密码！</label></td>
+							</tr>
+							<tr>
+								<td height="40" style="width:60px;"><span><strong transtag="">
+											用户名：</strong>&nbsp;</span></td>
+								<td style="width:170px;"><input name="UserName" type="text" class="text" id="UserName"
+										value="" maxlength="20" datatype="s1-20" errormsg="用户名至少1个字符,最多20个字符！" /></td>
+								<td>
+									<div class="Validform_checktip">用户名至少1个字符,最多20个字符！</div>
+								</td>
+							</tr>
+							<tr>
+								<td height="40" style="width:60px;"><span><strong transtag="">密码：</strong></span></td>
+								<td style="width:170px;"><input name="UserPws" type="password" class="text" id="UserPws"
+										value="" maxlength="20" onpaste="return false " datatype="s1-20"
+										nullmsg="请输入密码！" errormsg="密码范围在1~20位之间！" /></td>
+								<td>
+									<div class="Validform_checktip">密码范围在1~20位之间！</div>
+								</td>
+							</tr>
+							<tr>
+								<td>&nbsp;</td>
+								<td><button id="btn_login" class="button_bdeep" transtag="">登录</button></td>
+							</tr>
+						</table>
+					</form>
+				</td>
+			</tr>
+		</table>
+	</div>
+</body>
+
+</html>

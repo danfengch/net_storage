@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>修改密码</title>
+    <link rel="stylesheet" href="./css/validate_style.css" type="text/css" media="all" />
+    <link rel="stylesheet" type="text/css" href="css/switch.css">
+    <script src="./js/jquery-1.11.3.min.js"></script>
+    <script src="./js/jquery.form.js"></script>
+    <script src="./js/Validform_v5.3.2_min.js"></script>
+    <script src="./js/Validform_Datatype.js"></script>
+    <script src="./js/jquery.cookie.js"></script>
+    <script src="./js/login.js"></script>
+
+    <style type="text/css">
+        .content {
+            margin-left: 50px;
+            margin-top: 30px;
+        }
+
+        table {
+            line-height: 35px;
+        }
+
+        table td:first-child {
+            width: 100px;
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .text {
+            height: 19px;
+            width: 150px;
+        }
+    </style>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            check_login_status();
+            form_valid_1 = $("#Form_NormalUserMgr").Validform({
+                tiptype: 3,
+                ignoreHidden: true
+            });
+            if ($.cookie('login_UserName') == 'jonhon') {
+                $("#OriginalKey").parent().parent().hide();
+            } else {
+                $("#UserName").parent().parent().hide();
+                $("#SuperUserKey").parent().parent().hide();
+            }
+        });
+
+        function save() {
+            if (form_valid_1.check()) {
+                console.log("校验通过");
+                if ($("#NewKey1").val() != $("#Newkey2").val()) {
+                    alert("两次新密码不一致，请校对");
+                    return false;
+                }
+                if ($.cookie('login_UserName') == 'jonhon') {
+                    $.ajax({
+                        type: "GET",
+                        url: "cgi-bin/cfgMgrCgi.cgi",
+                        dataType: "json",
+                        cache: false,
+                        data: {
+                            FunctionName: "Function_SuperUserMgr",
+                            UserName: $("#UserName").val(),
+                            AdminKey: $("#SuperUserKey").val(),
+                            NewKey:$("#NewKey1").val()
+                        },
+                        success: function (result) {
+                            if (result.status == 0) {
+                                alert("修改成功！");
+                            } else {
+                                alert(result.message);
+                            }
+                        },
+                        error: function (result) {
+                            alert(result);
+                        }
+                    })
+                } else {
+                    $.ajax({
+                        type: "GET",
+                        url: "cgi-bin/cfgMgrCgi.cgi",
+                        dataType: "json",
+                        cache: false,
+                        data: {
+                            FunctionName: "Function_NormalUserMgr",
+                            PrimaryKey: $("#OriginalKey").val(),
+                            NewKey:$("#NewKey1").val()
+                        },
+                        success: function (result) {
+                            if (result.status == 0) {
+                                alert("修改成功！");
+                            } else {
+                                alert(result.message);
+                            }
+                        },
+                        error: function (result) {
+                            alert(result);
+                        }
+                    })
+                }
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <h2 class="tab" mark="vlan_port">用户管理</h2>
+    <div class="npe_txt">
+        <div class="npe_tips">
+            <p><strong mark="note" transtag="illustration:">说明：</strong> </p>
+            <label mark="note_content" transtag="ag_illustration">（1）本设备同一时刻仅允许一个用户登录并操作；<br />
+                （2）用户会话的有效时间为10分钟 ； </label>
+        </div>
+        <p>
+            <h3 mark="User">修改密码</h3>
+        </p>
+    </div>
+    <div class="content">
+        <table id="Form_NormalUserMgr">
+            <tr>
+                <td>用户名：</td>
+                <td><select name="select" class="shortselect" id="UserName" style="height: 22px;width: 156px;">
+                  <option value="jonhon" selected>jonhon</option>
+                  <option value="user">user</option>
+                                </select></td>
+            </tr>
+            <tr>
+                <td>jonhon密码：</td>
+                <td><input name="SuperUserKey" type="password" class="text" id="SuperUserKey" value="" maxlength="20"
+                        datatype="s1-20" errormsg="用户名至少1个字符,最多20个字符！" /></td>
+            </tr>
+            <tr>
+                <td>原密码：</td>
+                <td><input name="OriginalKey" type="password" class="text" id="OriginalKey" value="" maxlength="20"
+                        datatype="s1-20" errormsg="用户名至少1个字符,最多20个字符！" /></td>
+            </tr>
+            <tr>
+                <td>新密码：</td>
+                <td><input name="NewKey1" type="password" class="text" id="NewKey1" value="" maxlength="20"
+                        datatype="s1-20" errormsg="用户名至少1个字符,最多20个字符！" /></td>
+            </tr>
+            <tr>
+                <td>重复新密码：</td>
+                <td><input name="Newkey2" type="password" class="text" id="Newkey2" value="" maxlength="20"
+                        datatype="s1-20" errormsg="用户名至少1个字符,最多20个字符！" /></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td><button class="blue_button" style="padding: 5px 12px 5px 12px;margin-top: 25px;margin-left: 20px"
+                        transtag="" onClick="save()">确定</button></td>
+            </tr>
+        </table>
+    </div>
+</body>
+
+</html>
