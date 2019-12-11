@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>系统信息</title>
+    <link rel="stylesheet" type="text/css" href="css/switch.css">
+    <script src="./js/jquery-1.11.3.min.js"></script>
+    <script src="./js/jquery.form.js"></script>
+    <script src="./js/jquery.cookie.js"></script>
+    <script src="./js/login.js"></script>
+
+    <style type="text/css">
+        .content {
+            margin-left: 50px;
+            margin-top: 30px;
+        }
+        table{
+            line-height: 33px;
+            font-size: 13px;
+        }
+
+        table tr td{
+            width:150px;
+        }
+
+        table tr td:first-child {
+			text-align: right;
+			font-weight: bold;
+			padding-right: 5px;
+		}
+
+
+        table tr td:nth-child(3) {
+			text-align: right;
+			font-weight: bold;
+			padding-right: 5px;
+		}
+    </style>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            check_login_status();
+            load_info();
+
+            $("#btn_clear1").click(function(){
+                $.ajax({
+                type: "GET",
+                url: "cgi-bin/cfgMgrCgi.cgi",
+                dataType: "json",
+                data:{
+                    FunctionName:"Function_Lan1StatisticsClear"
+                },
+                success: function (result) {
+                    if(result.status==0){
+                        load_info();
+                        alert("清零成功");
+                    }else{
+                        alert(result.message);
+                    }
+                },
+                error: function (result) {
+					alert(result.message);
+				}
+                });
+            });
+            $("#btn_clear2").click(function(){
+                $.ajax({
+                type: "GET",
+                url: "cgi-bin/cfgMgrCgi.cgi",
+                dataType: "json",
+                data:{
+                    FunctionName:"Function_Lan2StatisticsClear"
+                },
+                success: function (result) {
+                    if(result.status==0){
+                        load_info();
+                        alert("清零成功");
+                    }else{
+                        alert(result.message);
+                    }
+                },
+                error: function (result) {
+					alert(result.message);
+				}
+                });
+            });
+
+        });
+
+
+        function load_info(){
+            $.ajax({
+                type: "GET",
+                url: "cgi-bin/cfgMgrCgi.cgi",
+                dataType: "json",
+                data:{
+                    FunctionName:"Function_SystemInfo",
+                    times:new Date().getTime()
+                },
+                success: function (result) {
+                    $("#HwVer").html(result.HwVer);
+                    $("#SN").html(result.SN);
+                    $("#CfgMgrVersion").html(result.CfgMgrVersion);
+                    $("#CfgMgrLastUpdateTime").html(result.CfgMgrLastUpdateTime);
+                    $("#LogicVersion").html(result.LogicVersion);
+                    $("#LogicLastUpdateTime").html(result.LogicLastUpdateTime);
+                    $("#CurrentTime").html(result.CurrentTime);
+                    $("#RunningTime").html(result.RunningTime+" 秒");
+                    if(result.Lan1LinkStatus==0){
+                        $("#Lan1LinkStatus").html("未连接");
+						$("#Lan1LinkSpeed").html("--");
+                    }else{
+                        $("#Lan1LinkStatus").html("已连接");
+						$("#Lan1LinkSpeed").html(result.Lan1LinkSpeed+" Mbps");
+                    }
+                    
+                    
+                    $("#Lan1RecvPackages").html(result.Lan1RecvPackages+" 包");
+                    //$("#Lan1SendPackages").html(result.Lan1SendPackages);
+                    if(result.Lan2LinkStatus==0){
+                        $("#Lan2LinkStatus").html("未连接");
+						$("#Lan2LinkSpeed").html("--");
+                    }else{
+                        $("#Lan2LinkStatus").html("已连接");
+						$("#Lan2LinkSpeed").html(result.Lan2LinkSpeed+" Mbps");
+                    }
+                    
+                    $("#Lan2RecvPackages").html(result.Lan2RecvPackages+" 包");
+                    //$("#Lan2SendPackages").html(result.Lan2SendPackages);
+                },
+                error: function (result) {
+					alert(result.message);
+				}
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <h2 class="tab" mark="vlan_port">系统维护</h2>
+    <div class="npe_txt">
+        <div class="npe_tips">
+            <p><strong mark="note" transtag="illustration:">说明：</strong> </p>
+            <label mark="note_content" transtag="ag_illustration">（1）设备信息列出了系统的硬件、数据处理单元、配置管理单元和系统版本信息，以及设备序列号。</label>
+        </div>
+        <p>
+            <h3 mark="User">系统信息</h3>
+        </p>
+    </div>
+    <div class="content">
+        <table>
+            <tr>
+                <td>硬件版本：</td>
+                <td><span id="HwVer">V1.0</span></td>
+                <td>设备序列号：</td>
+                <td><span id="SN">XXX-XXX-XXX</span></td>
+            </tr>
+            <tr>
+                <td>数据处理单元版本:</td>
+                <td><span id="LogicVersion">V1.0</span></td>
+                <td>最近一次更新时间：</td>
+                <td><span id="LogicLastUpdateTime">2019年8月12日 12:23:45</span></td>
+            </tr>
+            <tr>
+                <td>配置管理单元版本：</td>
+                <td><span id="CfgMgrVersion">V1.0</span></td>
+                <td>最近一次更新时间：</td>
+                <td><span id="CfgMgrLastUpdateTime">2019年8月12日 12:23:45</span></td>
+            </tr>
+            <tr>
+                <td>系统当前时间：</td>
+                <td><span id="CurrentTime">2019年8月12日 12:23:45</span></td>
+                <td>已运行时长:</td>
+                <td><span id="RunningTime">3天8小时16分25秒</span></td>
+            </tr>
+            <tr>
+                <td colspan=2 style="text-align: center">网络一</td>
+
+                <td colspan=2 style="text-align: center;font-weight: bold">网络二</td>
+
+            </tr>
+            <tr>
+                <td>Link状态：</td>
+                <td><span id="Lan1LinkStatus">已连接</span></td>
+                <td>Link状态：</td>
+                <td><span id="Lan2LinkStatus">已连接</span></td>
+            </tr>
+            <tr>
+                <td>连接速度：</td>
+                <td><span id="Lan1LinkSpeed">1Gbps</span></td>
+                <td>连接速度：</td>
+                <td><span id="Lan2LinkSpeed">1Gbps</span></td>
+            </tr>
+            <tr>
+                <td>抓包数量：</td>
+                <td><span id="Lan1RecvPackages">45</span></td>
+                <td>抓包数量：</td>
+                <td><span id="Lan2RecvPackages">45</span></td>
+            </tr>
+            <!--<tr>
+                <td>发包数量：</td>
+                <td><span id="Lan1SendPackages">56</span></td>
+                <td>发包数量：</td>
+                <td><span id="Lan2SendPackages">56</span></td>
+            </tr>
+            <tr>
+                <td id="btn_clear1" colspan=2 style="text-align: center"><button id="btn_login" class="blue_button"
+                    style="padding: 5px 12px 5px 12px;margin-top: 25px;"
+                    transtag="">统计清零</button></td>
+                <td id="btn_clear2" colspan=2 style="text-align: center"><button id="btn_login" class="blue_button"
+                    style="padding: 5px 12px 5px 12px;margin-top: 25px;"
+                    transtag="">统计清零</button></td>
+            </tr>-->
+        </table>
+    </div>
+</body>
+
+</html>

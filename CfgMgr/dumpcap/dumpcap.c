@@ -3228,9 +3228,9 @@ capture_loop_dispatch(loop_data *ld,
             }
 #else
             if (use_threads) {
-                inpkts = pcap_dispatch(pcap_src->pcap_h, -1, capture_loop_queue_packet_cb, (u_char *)pcap_src);
+                inpkts = pcap_dispatch(pcap_src->pcap_h, 1, capture_loop_queue_packet_cb, (u_char *)pcap_src);
             } else {
-                inpkts = pcap_dispatch(pcap_src->pcap_h, -1, capture_loop_write_packet_cb, (u_char *)pcap_src);
+                inpkts = pcap_dispatch(pcap_src->pcap_h, 1, capture_loop_write_packet_cb, (u_char *)pcap_src);
             }
 #endif
             if (inpkts < 0) {

@@ -1,0 +1,335 @@
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<!--
+	@descript: 系统管理
+	@author: chenxu
+	@at 20151220
+-->
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <script type="text/javascript">
+  </script>
+  <title>系统配置</title>
+  <link rel="stylesheet" type="text/css" href="css/switch.css">
+  <link rel="stylesheet" href="./css/validate_style.css" type="text/css" media="all" />
+  <style>
+    table {
+      width: 60%;
+      margin-top: 10px;
+      border-collapse: separate;
+      /*关键设置：间距5px*/
+      border-spacing: 5px;
+      /*均匀分布效果*/
+      table-layout: fixed;
+      margin-left: 5%;
+    }
+
+    table th {
+      height: 28px;
+      color: #fff;
+      text-align: left;
+    }
+
+    table th:first-child {
+      width: 60px;
+    }
+
+    table td {
+      height: 28px;
+      color: #000;
+      text-align: left;
+    }
+
+    table td:first-child {
+      width: 150px;
+    }
+  </style>
+  <script src="./js/jquery-1.11.3.min.js"></script>
+  <script src="./js/jquery.form.js"></script>
+  <script src="./js/Validform_v5.3.2_ncr_min.js"></script>
+  <script src="./js/Validform_Datatype.js"></script>
+  <script src="./js/jquery.cookie.js"></script>
+  <script src="./js/login.js"></script>
+  <script type="text/javascript" src="./js/ajaxfileupload.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function () {
+      check_login_status();
+      load_system_info();
+      form_valid_1 = $("#Form_Lan1Test").Validform({
+        tiptype: 3,
+        showAllError: true
+      });
+      form_valid_2 = $("#Form_Lan2Test").Validform({
+        tiptype: 3,
+        showAllError: true
+      });
+      $("#Lan1_Test").click(function () {
+        if($("#Lan1_Auto").is(':checked')){
+          alert("自动获取不能进行测试");
+          return false;
+        }
+        if (form_valid_1.check()) {
+          $.ajax({
+            type: "GET",
+            url: "cgi-bin/cfgMgrCgi.cgi",
+            dataType: "json",
+            cache: false,
+            data: {
+              FunctionName: "Function_Lan1Test",
+              Lan1_Auto: $("#Lan1_Auto").is(':checked').toString(),
+              Lan1_IP: $("#Lan1_IP").val(),
+              Lan1_Mask: $("#Lan1_Mask").val(),
+              Lan1_GateWay: $("#Lan1_GateWay").val(),
+              Lan1_Mac: $("#Lan1_Mac").val()
+            },
+            success: function (result) {
+              if (result.status == 0) {
+                alert("测试通过");
+              } else {
+                alert(result.message);
+              }
+            },
+            error: function (result) {
+              alert("系统出错");
+            }
+          })
+        } else {
+          alert("请根据提示信息修改");
+        }
+      });
+      $("#Lan2_Test").click(function () {
+        if($("#Lan2_Auto").is(':checked')){
+          alert("自动获取不能进行测试");
+          return false;
+        }
+        if (form_valid_2.check()) {
+          $.ajax({
+            type: "GET",
+            url: "cgi-bin/cfgMgrCgi.cgi",
+            dataType: "json",
+            cache: false,
+            data: {
+              FunctionName: "Function_Lan2Test",
+              Lan2_Auto: $("#Lan2_Auto").is(':checked').toString(),
+              Lan2_IP: $("#Lan2_IP").val(),
+              Lan2_Mask: $("#Lan2_Mask").val(),
+              Lan2_GateWay: $("#Lan2_GateWay").val(),
+              Lan2_Mac: $("#Lan2_Mac").val()
+            },
+            success: function (result) {
+              if (result.status == 0) {
+                alert("测试通过");
+              } else {
+                alert(result.message);
+              }
+            },
+            error: function (result) {
+              alert("系统出错");
+            }
+          })
+        } else {
+          alert("请根据提示信息修改");
+        }
+      });
+      $("#NetConfigSave").click(function () {
+        if (form_valid_1.check() && form_valid_2.check()) {
+          $.ajax({
+            type: "GET",
+            url: "cgi-bin/cfgMgrCgi.cgi",
+            dataType: "json",
+            cache: false,
+            data: {
+              FunctionName: "Function_NetConfigSave",
+              Lan1_Auto: $("#Lan1_Auto").is(':checked').toString(),
+              Lan1_IP: $("#Lan1_IP").val(),
+              Lan1_Mask: $("#Lan1_Mask").val(),
+              Lan1_GateWay: $("#Lan1_GateWay").val(),
+              Lan1_Mac: $("#Lan1_Mac").val(),
+              Lan2_Auto: $("#Lan2_Auto").is(':checked').toString(),
+              Lan2_IP: $("#Lan2_IP").val(),
+              Lan2_Mask: $("#Lan2_Mask").val(),
+              Lan2_GateWay: $("#Lan2_GateWay").val(),
+              Lan2_Mac: $("#Lan2_Mac").val()
+            },
+            success: function (result) {
+              if (result.status == 0) {
+                alert("保存通过");
+              } else {
+                alert(result.message);
+              }
+            },
+            error: function (result) {
+              alert("系统出错");
+            }
+          })
+        } else {
+          alert("请根据提示信息修改");
+        }
+      });
+    })  
+  </script>
+  <script type="text/javascript">
+    function load_system_info() {
+      $.ajax({
+        type: "GET",
+        url: "./cfg/config.xml",
+        cache:false, 
+        dataType: "xml",
+        error: function (XMLHttpRequest, textStatus, errorThrown) {
+          alert("加载系统配置失败！Info:" + "Can't load user information from the system. XMLHttpRequest.status="
+            + XMLHttpRequest.status + ",XMLHttpRequest.readyState=" + XMLHttpRequest.readyState);
+        },
+        success: function (userXML) {
+          var Lan1_Auto = $(userXML).find("Lan1_Auto").text();
+          var Lan1_IP = $(userXML).find("Lan1_IP").text();
+          var Lan1_Mask = $(userXML).find("Lan1_Mask").text();
+          var Lan1_GateWay = $(userXML).find("Lan1_GateWay").text();
+          var Lan1_Mac = $(userXML).find("Lan1_Mac").text();
+          var Lan2_Auto = $(userXML).find("Lan2_Auto").text();
+          var Lan2_IP = $(userXML).find("Lan2_IP").text();
+          var Lan2_Mask = $(userXML).find("Lan2_Mask").text();
+          var Lan2_GateWay = $(userXML).find("Lan2_GateWay").text();
+          var Lan2_Mac = $(userXML).find("Lan2_Mac").text();
+          $("#Lan1_IP").attr("value", Lan1_IP);
+          $("#Lan1_Mask").attr("value", Lan1_Mask);
+          $("#Lan1_GateWay").attr("value", Lan1_GateWay);
+          $("#Lan1_Mac").attr("value", Lan1_Mac);
+          $("#Lan1_Auto").prop("checked", eval(Lan1_Auto));
+          $("#Lan2_IP").attr("value", Lan2_IP);
+          $("#Lan2_Mask").attr("value", Lan2_Mask);
+          $("#Lan2_GateWay").attr("value", Lan2_GateWay);
+          $("#Lan2_Mac").attr("value", Lan2_Mac);
+          $("#Lan2_Auto").prop("checked", eval(Lan2_Auto));
+          check1();
+          check2();
+          document.getElementById("Lan1_Mac").onkeyup = function () {
+            this.value = this.value.replace(/\s/g, ' ').replace(/([0-9a-zA-Z]{2})(?=\d)/g, "$1-");;
+          };
+          document.getElementById("Lan2_Mac").onkeyup = function () {
+            this.value = this.value.replace(/\s/g, ' ').replace(/([0-9a-zA-Z]{2})(?=\d)/g, "$1-");;
+          };
+        }
+      })
+    }
+    function check1() {
+      if ($("#Lan1_Auto").is(':checked')) {
+        $("#Lan1_IP").attr("disabled", "disabled");
+        $("#Lan1_Mask").attr("disabled", "disabled");
+        $("#Lan1_GateWay").attr("disabled", "disabled");
+        // $("#Lan1_Mac").attr("disabled", "disabled");
+      } else {
+        $("#Lan1_IP").removeAttr("disabled");
+        $("#Lan1_Mask").removeAttr("disabled");
+        $("#Lan1_GateWay").removeAttr("disabled");
+        // $("#Lan1_Mac").removeAttr("disabled");
+      }
+    }
+    function check2() {
+      if ($("#Lan2_Auto").is(':checked')) {
+        $("#Lan2_IP").attr("disabled", "disabled");
+        $("#Lan2_Mask").attr("disabled", "disabled");
+        $("#Lan2_GateWay").attr("disabled", "disabled");
+        // $("#Lan2_Mac").attr("disabled", "disabled");
+      } else {
+        $("#Lan2_IP").removeAttr("disabled");
+        $("#Lan2_Mask").removeAttr("disabled");
+        $("#Lan2_GateWay").removeAttr("disabled");
+        // $("#Lan2_Mac").removeAttr("disabled");
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <h2 class="tab" transtag="">网络管理</h2>
+  <div class="npe_txt">
+    <div class="npe_tips">
+      <p><strong transtag="">说明：</strong> </p>
+      <label transtag="">（1）用户通过此页面对网络一和网络二的IPv4地址、子网掩码、默认网关进行配置；      </label>
+    </div>
+    <!-- <strong  style="width:80px;margin:5px;" transtag="">负载均衡:</strong>
+		<strong style="color:#ff6600;" transtag="">开启</strong>
+		<br /> -->
+    <p>
+      <h3 transtag="">网络设置</h3>
+    </p>
+  </div>
+  <div class="maincontent">
+    <!--addblacklist-->
+    <!-- <form id="Form_Lan1Test" name="Form_Lan1Test"> -->
+    <table id="Form_Lan1Test">
+      <tr>
+        <td style="font-weight: bold;">网络一</td>
+        <td>
+          <div style="font-family: Tahoma;float: left;">
+            <input type="checkbox" name="Lan1_Auto" id="Lan1_Auto" style="vertical-align:middle; margin-top:0;visibility:hidden;"
+              onchange="check1()"><!--自动获取-->
+          </div> <button class="blue_button" style="margin-left: 140px" id="Lan1_Test">测试</button>
+        </td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">IPv4地址</td>
+        <td><input name="Lan1_IP" type="text" id="Lan1_IP" value="192.168.0.1" size="20" datatype="ipv4" nullmsg="不能为空！"
+            errormsg="不正确的IPV4格式" /></td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">IPv4子网掩码</td>
+        <td><input name="Lan1_Mask" type="text" id="Lan1_Mask" value="255.255.255.0" datatype="ipv4" nullmsg="不能为空！"
+            errormsg="不正确的IPV4格式" /></td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">IPv4默认网关</td>
+        <td><input name="Lan1_GateWay" type="text" id="Lan1_GateWay" value="192.168.0.1" datatype="ipv4" nullmsg="不能为空！"
+            errormsg="不正确的IPV4格式" /></td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">MAC地址</td>
+        <td><input name="Lan1_Mac" type="text" id="Lan1_Mac" datatype="mac" nullmsg="不能为空！" readonly="readonly" disabled="true" errormsg="不正确的MAC地址格式" />
+        </td>
+      </tr>
+    </table>
+    <!-- </form> -->
+  </div>
+<div class="maincontent">
+    <!-- <form id="Form_Lan2Test" name="Form_Lan2Test"> -->
+    <table id="Form_Lan2Test">
+      <tr>
+        <td style="font-weight: bold;">网络二</td>
+        <td>
+          <div style="font-family: Tahoma;float: left;">
+            <input type="checkbox" name="Lan2_Auto" id="Lan2_Auto" style="vertical-align:middle; margin-top:0;visibility:hidden"
+              onchange="check2()"><!--自动获取-->
+          </div> <button class="blue_button" style="margin-left: 140px" id="Lan2_Test">测试</button>
+        </td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">IPv4地址</td>
+        <td><input name="Lan2_IP" type="text" id="Lan2_IP" value="192.168.0.1" size="20" datatype="ipv4" nullmsg="不能为空！"
+            errormsg="不正确的IPV4格式" /></td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">IPv4子网掩码</td>
+        <td><input name="Lan2_Mask" type="text" id="Lan2_Mask" value="255.255.255.0" datatype="ipv4" nullmsg="不能为空！"
+            errormsg="不正确的IPV4格式" /></td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">IPv4默认网关</td>
+        <td><input name="Lan2_GateWay" type="text" id="Lan2_GateWay" value="192.168.0.1" datatype="ipv4" nullmsg="不能为空！"
+            errormsg="不正确的IPV4格式" /></td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">MAC地址</td>
+        <td><input name="Lan2_Mac" type="text" id="Lan2_Mac" datatype="mac" nullmsg="不能为空！" readonly="readonly" disabled="true" errormsg="不正确的MAC地址格式" />
+        </td>
+      </tr>
+    </table>
+    <!-- </form> -->
+  </div>
+  <div style="margin-left: 23%;"><button class="blue_button" style="padding: 5px 12px 5px 12px;" id="NetConfigSave"
+      name="NetConfigSave">保存</button>
+  </div>
+</body>
+
+</html>

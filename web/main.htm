@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<!-- DW6 -->
+<head>
+<!-- Copyright 2005 Macromedia, Inc. All rights reserved. -->
+<title>中航光电科技</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" href="css/simple_title.css" type="text/css" />
+<link rel="stylesheet" href="css/simple_table.css" type="text/css" />
+<link rel="stylesheet" href="css/emx_nav_left.css" type="text/css" />
+<link rel="stylesheet" href="css/nav.css" type="text/css" />
+<script src="./js/jquery-1.11.3.min.js"></script>
+<script src="./js/jquery.form.js"></script>
+<script src="./js/Validform_v5.3.2_min.js"></script>
+<script src="./js/Validform_Datatype.js"></script>
+<script src="./js/jquery.cookie.js"></script>
+<script src="./js/login.js"></script>
+<style type="text/css">
+
+body{margin:0;padding:0;overflow-x:hidden;}
+
+html, body{height:100%;}
+
+img{border:none;}
+*{font-family:'微软雅黑';font-size:12px;color:#626262;}
+
+dl,dt,dd{display:block;margin:0;}
+
+a{text-decoration:none;}
+#bg{background-image:url(images/content/dotted.png);}
+.container{width:100%;height:100%;margin:auto;}
+/*left*/
+.leftsidebar_box{width:160px;height:auto !important;overflow:visible !important;position:relative;height:100% !important;background-color:#3992d0;}
+.line{height:2px;width:100%;background-image:url(images/left/line_bg.png);background-repeat:repeat-x;}
+.leftsidebar_box dt{padding-left:40px;padding-right:10px;background-repeat:no-repeat;background-position:10px center;color:#f5f5f5;font-size:14px;position:relative;line-height:48px;cursor:pointer;}
+.leftsidebar_box dd{background-color:#317eb4;padding-left:40px;}
+.leftsidebar_box dd a{color:#f5f5f5;line-height:20px;}
+.leftsidebar_box dt img{position:absolute;right:10px;top:20px;}
+.system_log dt{background-image:url(images/left/system.png)}
+.custom dt{background-image:url(images/left/custom.png)}
+.channel dt{background-image:url(images/left/channel.png)}
+.app dt{background-image:url(images/left/app.png)}
+.cloud dt{background-image:url(images/left/cloud.png)}
+.syetem_management dt{background-image:url(images/left/syetem_management.png)}
+.source dt{background-image:url(images/left/source.png)}
+.statistics dt{background-image:url(images/left/statistics.png)}
+.leftsidebar_box dl dd:last-child{padding-bottom:10px;}
+</style>
+<script type="text/javascript">
+	window.onload=function(){
+		check_login_status();
+	}
+</script>
+</head>
+<body bgcolor="#F4FFE4" id="bg">
+<table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#3992D0">
+  <tr bgcolor="#D5EDB3">
+    <td colspan="7">
+	<iframe src="header.htm" width="100%" height="100" frameborder="0" scrolling="no"></iframe>	</td>
+  </tr>
+</table>
+<table width="100%"  height="100%" border="0" cellpadding="0" cellspacing="0" background="images/content/dotted.png" bgcolor="#3992D0" >
+  <tr>
+    <td width="168px" valign="top">
+		<div class="container">
+			<div class="leftsidebar_box">
+				<div class="line"></div>
+				<dl class="syetem_management">
+					<dt>网络管理<img src="images/left/select_xl01.png"></dt>
+					<dd class="first_dd"><a href="./network_config.htm" target="mainFrame">网络设置</a></dd>		
+				</dl>
+				<dl class="cloud">
+					<dt>存储管理<img src="images/left/select_xl01.png"></dt>
+					<dd class="first_dd"><a href="storage_capture.htm" target="mainFrame">网络捉包</a></dd>
+					<dd class="first_dd"><a href="storage_filter.htm" target="mainFrame">过滤控制</a></dd>	
+					<dd class="first_dd"><a href="storage_file.htm" target="mainFrame">文件管理</a></dd>
+					<dd class="first_dd"><a href="storage_disk_info.htm" target="mainFrame">磁盘信息</a></dd>					
+				</dl>
+				<dl class="custom">
+					<dt>用户管理<img src="images/left/select_xl01.png"></dt>
+					<dd class="first_dd"><a href="./user_pwd.htm" target="mainFrame">修改密码</a></dd>
+				</dl>
+				<dl class="statistics">
+					<dt>系统维护<img src="images/left/select_xl01.png"></dt>
+					<dd class="first_dd"><a href="./sys_info.htm" target="mainFrame">系统信息</a></dd>
+					<dd class="first_dd"><a href="./sys_time.htm" target="mainFrame">时间设置</a></dd>
+					<dd class="first_dd"><a href="./sys_log.htm" target="mainFrame">系统日志</a></dd>
+					<dd class="first_dd" id="sys_advanced"><a href="./sys_advanced.htm" target="mainFrame">高级管理</a></dd>
+				</dl>
+				<dl class="system_log">
+					<dt>系统退出<img src="images/left/select_xl01.png"></dt>
+					<dd class="first_dd"><a href="./sys_logout.htm" target="mainFrame">注销登录</a></dd>
+				</dl>
+			</div>	
+		</div>	
+	</td>
+	<td width="100%" valign="top" height="100%">
+		<iframe name="mainFrame" id="mainFrame" width="100%"  height="100%" frameborder="0" marginwidth="0" marginheight="0"  scrolling="yes" src="./network_config.htm"></iframe>
+	</td>
+  </tr>
+</table>	
+<script type="text/javascript">
+$(".leftsidebar_box dt").css({"background-color":"#3992d0"});
+$(".leftsidebar_box dt img").attr("src","images/left/select_xl01.png");
+$(function(){
+	if ($.cookie('login_UserName')!='jonhon') {
+			$("#sys_advanced").remove();
+		}
+	$(".leftsidebar_box dd").hide();
+	$(".leftsidebar_box dt").click(function(){
+		$(".leftsidebar_box dt").css({"background-color":"#3992d0"})
+		$(this).css({"background-color": "#317eb4"});
+		$(this).parent().find('dd').removeClass("menu_chioce");
+		$(".leftsidebar_box dt img").attr("src","images/left/select_xl01.png");
+		$(this).parent().find('img').attr("src","images/left/select_xl.png");
+		$(".menu_chioce").slideUp(); 
+		$(this).parent().find('dd').slideToggle();
+		$(this).parent().find('dd').addClass("menu_chioce");
+	});
+})
+</script>	
+<!-- <div style="text-align:center;margin:40px 0; font:normal 14px/24px 'MicroSoft YaHei';">
+<p>推荐使用360或FireFox浏览器，分辨率不低于1280*720.</p>
+</div> -->
+</body>
+</html>

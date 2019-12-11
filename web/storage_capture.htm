@@ -1,0 +1,258 @@
+<!DOCTYPE html
+	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<script type="text/javascript">
+	</script>
+	<title>网络抓包</title>
+	<link rel="stylesheet" type="text/css" href="css/switch.css">
+	<link rel="stylesheet" href="./css/validate_style.css" type="text/css" media="all" />
+	<style type="text/css">
+		.chooseBtn {
+			display: none;
+			/*input不可见，实际只用到了lable*/
+		}
+
+		.choose-label {
+			box-shadow: #ccc 0px 0px 0px 1px;
+			width: 52px;
+			/*长条长度*/
+			height: 23px;
+			/*长条高度*/
+			display: inline-block;
+			border-radius: 20px;
+			position: relative;
+			background-color: #bdbdbd;
+			overflow: hidden;
+		}
+
+		/*小圆点*/
+		.choose-label:before {
+			content: '';
+			position: absolute;
+			left: 0;
+			width: 22px;
+			/*圆点半径*/
+			height: 22px;
+			/*圆点半径*/
+			display: inline-block;
+			border-radius: 20px;
+			background-color: #fff;
+			z-index: 20;
+			-webkit-transition: all 0.5s;
+			transition: all 0.5s;
+		}
+
+		.chooseBtn:checked+label.choose-label:before {
+			left: 30px;
+			/*圆点距离左边的距离，设置长条的一半较好*/
+		}
+
+		.chooseBtn:checked+label.choose-label {
+			background-color: #3CB371;
+			/*绿色*/
+		}
+
+		table {
+			width: 60%;
+			margin-top: 10px;
+			border-collapse: separate;
+			/*关键设置：间距5px*/
+			border-spacing: 5px;
+			/*均匀分布效果*/
+			table-layout: fixed;
+			margin-left: 5%;
+			font-size: 14px;
+		}
+
+		table th {
+			height: 28px;
+			color: #fff;
+			text-align: left;
+		}
+
+		table td {
+			height: 28px;
+			color: #000;
+			text-align: left;
+		}
+	</style>
+	<script src="./js/jquery-1.11.3.min.js"></script>
+	<script src="./js/jquery.form.js"></script>
+	<script src="./js/Validform_v5.3.2_min.js"></script>
+	<script src="./js/Validform_Datatype.js"></script>
+	<script src="./js/jquery.cookie.js"></script>
+	<script src="./js/login.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function () {
+			check_login_status();
+			read_info();
+			if (window.ActiveXObject || "ActiveXObject" in window){
+				$("#Lan1_choose").show();
+				$("#Lan2_choose").show();
+			}
+			$("#NetCaptureSave").click(function () {
+				$.ajax({
+					type: "GET",
+					url: "cgi-bin/cfgMgrCgi.cgi",
+					dataType: "json",
+					cache: false,
+					data: {
+						FunctionName: "Function_NetCapture",
+						Lan1_CaptureServiceStatus: $("#Lan1_CaptureServiceStatus").is(':checked').toString(),
+						Lan1_AutoUpLoadEnable: $("#Lan1_AutoUpLoadEnable").is(':checked').toString(),
+						Lan1_AutoUpLoadPath:$("#Lan1_AutoUpLoadPath").val(),
+						Lan2_CaptureServiceStatus: $("#Lan2_CaptureServiceStatus").is(':checked').toString(),
+						Lan2_AutoUpLoadEnable: $("#Lan2_AutoUpLoadEnable").is(':checked').toString(),
+						Lan2_AutoUpLoadPath:$("#Lan2_AutoUpLoadPath").val(),
+					},
+					success: function (result) {
+						if (result.status == 0) {
+							alert("保存成功");
+						} else {
+							alert(result.message);
+						}
+					},
+					error: function (result) {
+						alert(result);
+					}
+				});
+			})
+		})
+	</script>
+	<script type="text/javascript">
+		function read_info() {
+			$.ajax({
+				type: "GET",
+				url: "./cfg/config.xml",
+				dataType: "xml",
+				cache: false,
+				error: function (XMLHttpRequest, textStatus, errorThrown) {
+					alert("Can't load user information from the system. XMLHttpRequest.status="
+						+ XMLHttpRequest.status + ",XMLHttpRequest.readyState=" + XMLHttpRequest.readyState);
+				},
+				success: function (captureXML) {
+					var Lan1_CaptureServiceStatus = $(captureXML).find("Lan1_CaptureServiceStatus").text();
+					var Lan1_AutoUpLoadEnable = $(captureXML).find("Lan1_AutoUpLoadEnable").text();
+					var Lan1_AutoUpLoadPath = $(captureXML).find("Lan1_AutoUpLoadPath").text();
+					var Lan2_CaptureServiceStatus = $(captureXML).find("Lan2_CaptureServiceStatus").text();
+					var Lan2_AutoUpLoadEnable = $(captureXML).find("Lan2_AutoUpLoadEnable").text();
+					var Lan2_AutoUpLoadPath = $(captureXML).find("Lan2_AutoUpLoadPath").text();
+					$("#Lan1_CaptureServiceStatus").prop("checked", eval(Lan1_CaptureServiceStatus));
+					$("#Lan1_AutoUpLoadEnable").prop("checked", eval(Lan1_AutoUpLoadEnable));
+					$("#Lan1_AutoUpLoadPath").val(Lan1_AutoUpLoadPath);
+					$("#Lan2_CaptureServiceStatus").prop("checked", eval(Lan2_CaptureServiceStatus));
+					$("#Lan2_AutoUpLoadEnable").prop("checked", eval(Lan2_AutoUpLoadEnable));
+					$("#Lan2_AutoUpLoadPath").val(Lan2_AutoUpLoadPath);
+					// 对checkbox的操作
+					// $("#obj").prop("checked", true)
+					// $("#obj").is(':checked');
+				}
+			})
+		}  
+
+		function browseFolder(obj) {
+            try {
+                var Message = "\u8bf7\u9009\u62e9\u6587\u4ef6\u5939"; //选择框提示信息
+                var Shell = new ActiveXObject("Shell.Application");
+                var Folder = Shell.BrowseForFolder(0, Message, 64, 17); //起始目录为：我的电脑
+                //var Folder = Shell.BrowseForFolder(0, Message, 0); //起始目录为：桌面
+                if (Folder != null) {
+                    Folder = Folder.items(); // 返回 FolderItems 对象
+                    Folder = Folder.item(); // 返回 Folderitem 对象
+                    Folder = Folder.Path; // 返回路径
+                    if (Folder.charAt(Folder.length - 1) != "\\") {
+                        Folder = Folder + "\\";
+                    }
+					Folder.replace("\\","\\\\")
+                    $(obj).prev().val(Folder);
+                    return Folder;
+                }
+            }
+            catch (e) {
+                alert(e.message);
+            }
+        }
+	</script>
+</head>
+
+<body>
+	<h2 class="tab" mark="vlan_port">存储管理</h2>
+	<div class="npe_txt">
+		<div class="npe_tips">
+			<p><strong mark="note" transtag="illustration:">说明：</strong> </p>
+			<label mark="note_content"
+				transtag="ag_illustration">（1）网络抓包服务开启后，配置管理单元将捕获对应网络的网络数据包，并以pcap格式存储在硬盘中，记录网络通信数据；<br />
+				（2）网络抓包服务关闭后，配置管理单元将不再捕获对应网络上的数据包，且保留之前已捕获的数据；</label>
+		</div>
+		<p>
+			<h3 mark="User">网络抓包</h3>
+		</p>
+	</div>
+	<div class="maincontent">
+		<table>
+			<tr>
+				<td>
+					<div style="float: left;margin-right: 60px;margin-top:4px">网络一抓包服务:</div>
+					<div class="switch">
+						<input type="checkbox" name="" id="Lan1_CaptureServiceStatus" class="chooseBtn" />
+						<label for="Lan1_CaptureServiceStatus" class="choose-label"></label>
+					</div>
+				</td>	
+			</tr>
+			<!--<tr>
+				<td><div style="font-family: Tahoma;float: left;"><input type="checkbox" name="Lan1_AutoUpLoadEnable" id="Lan1_AutoUpLoadEnable"
+							style="vertical-align:middle; margin-top:0;">自动上传到指定目录
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div style="clear: both">
+						<input type="text" id="Lan1_AutoUpLoadPath" style="height: 20px;"/><input type="button" class="blue_button"
+						value="浏览"
+					id="Lan1_choose" style="height:25px;margin-left: 20px;display: none;" onclick="browseFolder(this)">
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td></td>
+			</tr>-->
+		</table>
+		<table>
+			<tr>
+				<td>
+					<div style="float: left;margin-right: 60px;margin-top:4px">网络二抓包服务:</div>
+					<div class="switch">
+						<input type="checkbox" name="" id="Lan2_CaptureServiceStatus" class="chooseBtn" />
+						<label for="Lan2_CaptureServiceStatus" class="choose-label"></label>
+					</div>
+				</td>	
+			</tr>
+			<!--<tr>
+				<td>
+					<div style="font-family: Tahoma;float: left;"><input type="checkbox" name="Lan2_AutoUpLoadEnable" id="Lan2_AutoUpLoadEnable"
+							style="vertical-align:middle; margin-top:0;">自动上传到指定目录
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div style="clear: both">
+						<input type="text" id="Lan2_AutoUpLoadPath" style="height: 20px"/><input type="button" class="blue_button"
+						value="浏览"
+					id="Lan2_choose" style="height:25px;margin-left: 20px;display: none;" onclick="browseFolder(this)">
+					</div>
+				</td>
+			</tr>-->
+			<tr>
+				<td><input type="button" class="blue_button" value="保存"
+					id="NetCaptureSave" style="width:50px;height:30px;margin-left: 50px;margin-top: 20px;"></td>
+			</tr>
+		</table>
+	</div>
+</body>
+
+</html>

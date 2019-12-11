@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>文件管理</title>
+    <link rel="stylesheet" href="./css/validate_style.css" type="text/css" media="all" />
+    <link rel="stylesheet" href="./css/bootstrap.min.css" type="text/css" />
+    <link rel="stylesheet" href="./css/dataTables.bootstrap.min.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="css/switch.css">
+    <script src="./js/jquery-1.11.3.min.js"></script>
+    <script src="./js/jquery.dataTables.min.js"></script>
+    <script src="./js/dataTables.bootstrap.min.js"></script>
+    <script src="./js/jquery.form.js"></script>
+    <script src="./js/Validform_v5.3.2_min.js"></script>
+    <script src="./js/Validform_Datatype.js"></script>
+    <script src="./js/jquery.cookie.js"></script>
+    <script src="./js/login.js"></script>
+    <script src="./js/uarm_date.js"></script>
+    <script src="./plugin/laydate/laydate.js"></script>
+    <script src="./js/FileSaver.js"></script>
+    <script src="./plugin/layer/layer.js"></script>
+    <!-- <!–[if IE]>
+        <script src="./js/html5shiv.js"></script>
+        <script src="https://cdn.bootcss.com/es6-promise/4.1.1/es6-promise.auto.min.js"></script>
+    <![endif]–> -->
+
+    <style type="text/css">
+        .content {
+            margin-left: 50px;
+            margin-top: 30px;
+        }
+
+        .layui-laydate-main {
+            width: 220px;
+        }
+
+        .layui-laydate-content td,
+        .layui-laydate-content th {
+            width: 27px;
+        }
+
+        /* #example th {
+            text-align: center;
+        } */
+    </style>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $.removeCookie('localLocation');
+            check_login_status();
+
+            laydate.render({
+                elem: '#startTime'
+                , type: 'datetime'
+            });
+            laydate.render({
+                elem: '#endTime'
+                , type: 'datetime'
+            });
+            var st = $.cookie('file_query_startTime');
+            if (st == null) {
+                st = new Date().format("yyyy-MM-dd 00:00:00")
+            }
+
+            var et = $.cookie('file_query_endTime');
+            if (et == null) {
+                et = new Date().format("yyyy-MM-dd hh:mm:ss");
+            }
+            $("#startTime").val(st);
+            $("#endTime").val(et);
+            dt=$('#example').DataTable({
+                "paging": true,
+                "bLengthChange": false,
+                "ordering": false,
+                "info": true,
+                "searching": false,
+                "serverSide": true,
+                "oLanguage": {
+                    "sLengthMenu": "每页显示 _MENU_ 条记录",
+                    "sZeroRecords": "抱歉， 没有找到",
+                    "sInfo": "从 _START_ 到 _END_ /共 _TOTAL_ 条数据",
+                    "sInfoEmpty": "空空如也",
+                    "sInfoFiltered": "(从 _MAX_ 条数据中检索)",
+                    "oPaginate": {
+                        "sFirst": "首页",
+                        "sPrevious": "上一页",
+                        "sNext": "下一页",
+                        "sLast": "尾页"
+                    }
+                },
+                "ajax": {
+                    "url": "/cgi-bin/cfgMgrCgi.cgi",
+                    "type": "post",
+                    "data": {
+                        "FunctionName": "Function_FileLookUp",
+                        "NetNumber": $("#NetNumber").val(),
+                        "StartTime": st,
+                        "EndTime": et
+                    }
+                },
+                "columns": [
+                    {
+                        "sClass": "text-center",
+                        "data": "url",
+                        "render": function (data, type, full, meta) {
+                            return '<input type="checkbox" name="checkbox" class="mycb" value="'+full.month +','+ data +'">';
+                        }
+                    }, {
+                        "sClass": "text-center",
+                        "data": "fileName",
+                    }
+                    , {
+                        "sClass": "text-center",
+                        "data": "fileName",
+                    }, {
+                        "sClass": "text-center",
+                        "data": "modifyTime",
+                    }, {
+                        "sClass": "text-center",
+                        "data": "sizeMB",
+                        "render": function (data, type, full, meta) {
+                            return data + 'MB';
+                        }
+                    }
+                ],
+
+                "drawCallback": function () { // 序號列
+                    $("#checkAll").prop("checked", false);
+                    var api = this.api();
+                    var startIndex = api.context[0]._iDisplayStart; // 獲取本頁開始的條數
+                    api.column(1).nodes().each(function (cell, i) {
+                        cell.innerHTML = startIndex + i + 1;
+                    });
+                }
+
+            });
+
+            $("#checkAll").click(function(){
+                if (this.checked) {
+                    $("input:checkbox").each(function () {
+                        $(this).prop("checked", true);
+                    });
+                } else {
+
+                    // 全不选中
+                    $("input:checkbox").each(function () {
+                        $(this).prop("checked", false);
+                    });
+                }
+            });
+
+
+            $("#search").click(function () {
+                var st = $("#startTime").val();
+                var et = $("#endTime").val();
+                if (st == "" || et == "") {
+                    alert("请选择日期");
+                    return false;
+                }
+                $.removeCookie('localLocation');
+                $.cookie('file_query_startTime', st);
+                $.cookie('file_query_endTime', et);
+                var param ={
+                    "FunctionName": "Function_FileLookUp",
+                    "NetNumber": $("#NetNumber").val(),
+                    "StartTime": st,
+                    "EndTime": et
+                };
+                dt.settings()[0].ajax.data = param;
+                dt.ajax.reload();
+            });
+
+            $("#download").click(function () {
+                scbnum= $("input[class='mycb']:checkbox:checked").length;
+                if(scbnum<=0){
+                    alert("请勾选需要下载的文件");
+                    return false;
+                }
+                if (window.ActiveXObject || "ActiveXObject" in window){
+                    // layer.load();
+                     if($.cookie('localLocation')==null){
+                         var bf=browseFolder();
+                         if(bf==null){
+                             return false;
+                         }
+                        $.cookie('localLocation',bf);
+                     }
+                    var tipsID=layer.msg('下载中，请勿关闭页面', {
+                        icon: 16
+                        , shade: 0.01,
+                        time:false //取消自动关闭
+                    });
+                    $.when(toGetData()).done(function (ret) {
+                        // layer.closeAll('loading');
+                        layer.close(tipsID);
+                        if(ret==""){
+                            alert("下载完成");
+                        }
+                    });
+                }else{
+                    $("input[class='mycb']:checkbox:checked").each(function (i) {
+                        var url = $(this).val();
+                        // downloadWithBlob(url,url.substring(url.lastIndexOf("/") + 1, url.length));
+                        downloadFun(url.substring(url.lastIndexOf("/") + 1, url.length),url);
+                    });
+                }
+            });
+
+        });
+
+        function toGetData(){
+            defer= $.Deferred();
+            var ll=$.cookie('localLocation');
+            selectedCheckboxNum= $("input[class='mycb']:checkbox:checked").length;
+            $("input[class='mycb']:checkbox:checked").each(function (i) {
+                        var checkboxValue=$(this).val();
+                        var index=checkboxValue.lastIndexOf(",");
+                        var subPath=checkboxValue.substring(0,index);
+                        var url =checkboxValue.substring(index+1,checkboxValue.length);
+                        downloadWithADODB(url,ll+subPath+"\\",url.substring(url.lastIndexOf("/") + 1, url.length));
+                    });
+            return defer;
+        }
+
+        //文件夹选择器（只支持IE）
+        function browseFolder() {
+            try {
+                var Message = "\u8bf7\u9009\u62e9\u6587\u4ef6\u5939"; //选择框提示信息
+                var Shell = new ActiveXObject("Shell.Application");
+                var Folder = Shell.BrowseForFolder(0, Message, 64, 17); //起始目录为：我的电脑
+                //var Folder = Shell.BrowseForFolder(0, Message, 0); //起始目录为：桌面
+                if (Folder != null) {
+                    Folder = Folder.items(); // 返回 FolderItems 对象
+                    Folder = Folder.item(); // 返回 Folderitem 对象
+                    Folder = Folder.Path; // 返回路径
+                    if (Folder.charAt(Folder.length - 1) != "\\") {
+                        Folder = Folder + "\\";
+                    }
+                    return Folder;
+                }
+            }
+            catch (e) {
+                alert(e.message);
+            }
+        }
+
+
+
+        function downloadWithADODB(strRemoteURL,localPath, filename) {
+            try {
+                var xmlHTTP = new ActiveXObject("Microsoft.XMLHTTP");
+                xmlHTTP.open("Get", strRemoteURL, true);
+                xmlHTTP.setRequestHeader('If-Modified-Since', '0');
+                xmlHTTP.send();
+                // var adodbStream = new ActiveXObject("ADODB.Stream");
+                // adodbStream.Type = 1;//1=adTypeBinary
+                // adodbStream.Open();
+                // adodbStream.write(xmlHTTP.responseBody);
+                // adodbStream.SaveToFile(strLocalURL, 2);
+                // adodbStream.Close();
+                // adodbStream = null;
+                // xmlHTTP = null;
+                xmlHTTP.onreadystatechange = function(){
+                    if(xmlHTTP.readyState == 4){
+                        if(xmlHTTP.status == 200){
+                            var adodbStream = new ActiveXObject("ADODB.Stream");
+                            var fso = new ActiveXObject("Scripting.FileSystemObject");
+                            if(!fso.FolderExists(localPath)){
+		                        fso.CreateFolder(localPath);
+	                        }
+                            adodbStream.Type = 1;//1=adTypeBinary
+                            adodbStream.Open();
+                            adodbStream.write(xmlHTTP.responseBody);
+                            adodbStream.SaveToFile(localPath+filename, 2);
+                            adodbStream.Close();
+                            adodbStream = null;
+                            xmlHTTP = null;
+                            selectedCheckboxNum--;
+                            if(selectedCheckboxNum==0){
+                                defer.resolve("");
+                            }
+                        }else {
+                            selectedCheckboxNum--;
+                            if(selectedCheckboxNum==0){
+                                defer.resolve(xmlHTTP.status);
+                            }
+                            alert("出现错误，状态码："+xmlHTTP.status);
+                        }
+                    }
+                }
+            }
+            catch (e) {
+                selectedCheckboxNum--;
+                alert(e.message);
+            }
+        }
+
+        //支持文本文件，不支持二进制文件
+        function downWithFSO(name,url) {
+            var objXML = new ActiveXObject("Microsoft.XMLHTTP");
+            var strURL = url;
+            objXML.open('GET', strURL, false);
+            objXML.send();
+
+            var fso = new ActiveXObject("Scripting.FileSystemObject");
+            var fs = fso.CreateTextFile("d:\\"+name, 2, true);
+            fs.write(objXML.responseText);
+            fs.close();
+            fs = null;
+            fso = null;
+            objXML = null;
+            alert("下载完成");
+        }
+
+
+        function downloadFun(name, href) {
+            var a = document.createElement("a"), //创建a标签
+                e = document.createEvent("MouseEvents"); //创建鼠标事件对象
+            e.initEvent("click", false, false); //初始化事件对象
+            a.href = href; //设置下载地址
+            a.download = name; //设置下载文件名
+            a.dispatchEvent(e); //给指定的元素，执行事件click事件
+        }
+
+
+        function getBlob(url) {
+            return new Promise(function (resolve) {
+                var xhr = new XMLHttpRequest();
+
+                xhr.open('GET', url, true);
+                xhr.responseType = 'blob';
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        resolve(xhr.response);
+                    }
+                };
+
+                xhr.send();
+            });
+        }
+
+        function saveAs(blob, filename) {
+            if (window.navigator.msSaveOrOpenBlob) {
+                navigator.msSaveBlob(blob, filename);
+            } else {
+                var link = document.createElement('a');
+
+                link.href = window.URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+
+                window.URL.revokeObjectURL(link.href);
+            }
+        }
+
+        function downloadWithBlob(url, filename) {
+            getBlob(url).then(function (blob) {
+                saveAs(blob, filename);
+            });
+        }
+
+
+        function downloadForIE8(url, name) {
+            if (!!window.ActiveXObject || "ActiveXObject" in window) {
+                //ie
+                var oPow = window.open(url, "", "width = 1, height = 1, top = 5000, left = 5000 ");
+                var isOpen = true; //判断window.open是否被禁用
+                try {
+                    if (oPow == null) {
+                        isOpen = false
+                    }
+                } catch (err) {
+                    isOpen = false
+                }
+                if (isOpen) {
+                    //没禁用window.open采用window.open下载
+                    while (oPow.document.readyState !== "complete") {
+                        if (oPow.document.readyState === "complete") break;
+                    }
+                    oPow.document.execCommand("SaveAs", true, name);
+                    oPow.close();
+                } else {
+                    //禁用了window.open采用iframe下载
+                    var oIrame = document.createElement('iframe');
+                    oIrame.style.width = "0px";
+                    oIrame.style.height = "0px";
+                    oIrame.style.opacity = 1;
+                    document.body.appendChild(oIrame)
+                    oIrame.src = url;
+                    var IfDoc = oIrame.contentDocument || oIrame.document;
+                    oIrame.onreadystatechange = function () { // IE下的节点都有onreadystatechange这个事件  
+                        if (oIrame.readyState == "complete") {
+                            // oIrame.execCommand("SaveAs", true, name)
+                            document.body.removeChild(oIrame)
+                        }
+                    };
+
+                }
+
+            } else {
+                if (typeof url == 'object' && url instanceof Blob) {
+                    url = URL.createObjectURL(url); // 创建blob地址
+                }
+                var aLink = document.createElement('a');
+                aLink.href = url;
+                aLink.download = name || ''; // HTML5新增的属性，指定保存文件名，可以不要后缀，注意，file:///模式下不会生效
+                var event;
+                if (window.MouseEvent) {
+                    event = new MouseEvent('click');
+                } else {
+                    if (document.createEvent) {
+                        event = document.createEvent('MouseEvents');
+                        event.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+                    }
+                }
+                aLink.dispatchEvent(event);
+            }
+
+        }
+
+    </script>
+</head>
+
+<body>
+    <h2 class="tab" mark="vlan_port">文件管理</h2>
+    <iframe id="my_iframe" style="display:none;"></iframe>
+    <div class="npe_txt">
+        <div class="npe_tips">
+            <p><strong mark="note" transtag="illustration:">说明：</strong> </p>
+            <label mark="note_content" transtag="ag_illustration" style="font-weight: normal;"></label>（1）用户通过以太网文件管理下载配置管理单元捕获的网络数据文件，实现对网络数据的分析；<br />
+                （2）用户可以按时间和网络编号段筛选自己想要的以太网数据文件；<br >
+                （3）点击“下载”按钮后，页面将选中的文件下载到计算机本地指定目录。<br>            
+        </div>
+    </div>
+    <div class="content" style="margin:5px; padding:0px">
+        <div style="width: 67%;float: left;">
+            <table id="example" class="table table-striped table-bordered" style="width:100%">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" style="margin: 0px" id="checkAll"/></th>
+                        <th>序号</th>
+                        <th>文件名</th>
+                        <th>修改时间</th>
+                        <th>文件大小</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+        <div style="width: 30%;float:right;margin-left:2%">
+            <p>网络编号</p>
+            <div>
+                <select id="NetNumber" class="shortselect" style="height: 22px;width: 177px;">
+                    <!--<option value="0">所有</option>-->
+                    <option value="1">网络一</option>
+                    <option value="2">网络二</option>
+                </select>
+            </div>
+            <p style="margin-top:10px">开始时间：</p>
+            <div><input type="text" id="startTime" readonly="readonly" style="height:22px;width:177px;"></div>
+            <p style="margin-top:10px">结束时间：</p>
+            <div><input type="text" id="endTime" readonly="readonly" style="height:22px;width:177px;"></div>
+            <div style="width: 177px;text-align: center;margin-top: 10px;"><input type="button" class="blue_button"
+                    value="搜索"
+                id="search" style="width:100px;height:25px;"></div>
+            <div style="width: 177px;text-align: center;margin-top: 10px;"><input type="button" class="blue_button"
+                    value="下载"
+                id="download" style="width:100px;height:25px;"></div>
+        </div>
+    </div>
+</body>
+
+</html>

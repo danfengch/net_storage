@@ -1,0 +1,17 @@
+/* Class Styles */
+.big_blod {
+	font: 30px "Arial","Microsoft YaHei","黑体","宋体",sans-serif;
+	color: #FFFFFF;
+	line-height:26px;
+	letter-spacing:.1em;
+	text-decoration: none;
+	}
+	
+.small_blod {
+	font: 16px "Arial","Microsoft YaHei","黑体","宋体",sans-serif;
+	color: #FFFFFF;
+	line-height:26px;
+	letter-spacing:.1em;
+	text-decoration: none;
+	}	
+	

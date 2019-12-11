@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>修改密码</title>
+    <link rel="stylesheet" href="./css/validate_style.css" type="text/css" media="all" />
+    <link rel="stylesheet" type="text/css" href="css/switch.css">
+    <script src="./js/jquery-1.11.3.min.js"></script>
+    <script src="./js/jquery.form.js"></script>
+    <script src="./js/Validform_v5.3.2_min.js"></script>
+    <script src="./js/Validform_Datatype.js"></script>
+    <script src="./js/jquery.cookie.js"></script>
+    <script src="./js/login.js"></script>
+    <script src="./js/uarm_date.js"></script>
+    <script src="./plugin/laydate/laydate.js"></script>
+
+    <style type="text/css">
+        .content {
+            margin-left: 50px;
+            margin-top: 30px;
+            font-size: 15px;
+        }
+
+        .layui-laydate-main {
+            width: 220px;
+        }
+
+        .layui-laydate-content td,
+        .layui-laydate-content th {
+            width: 27px;
+        }
+    </style>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            check_login_status();
+            timeDiff();
+            setInterval(function () {
+                timeDiff();
+                //显示本地时间
+                // if ($("#tongbu").is(':checked')){
+                //     $("#localTime").val(new Date(Date.now()).format("yyyy-MM-dd hh:mm:ss"));
+                // }
+            }, 1000);
+
+            laydate.render({
+                elem: '#localTime' //指定元素
+                , type: 'datetime'
+            });
+        });
+
+
+
+        function timeDiff() {
+            $.ajax({
+                type: "GET",
+                url: "cgi-bin/cfgMgrCgi.cgi",
+                async: true,
+                dataType: "json",
+                data:{
+                    FunctionName:"Function_SystemTimeGet",
+                    times:new Date().getTime()
+                },
+                success: function (result) {
+                    $("#serverTime").html(new Date(result.currentTime.replace(/-/g,"/")).format("yyyy-MM-dd hh:mm:ss"));
+                },
+                error: function (result) {
+					// alert(result.message);
+				}
+            });
+        }
+
+        function check(){
+            if ($("#tongbu").is(':checked')) {
+                $("#localTime").attr("disabled", "disabled");
+            }else{
+                $("#localTime").removeAttr("disabled");
+            }
+
+        }
+
+        function save(){
+            var lt=new Date().format("yyyy-MM-dd hh:mm:ss");
+            if (!$("#tongbu").is(':checked')){
+                lt=$("#localTime").val();
+            }
+            if(lt==null||lt==""){
+                alert("请选择本地时间");
+                return false;
+            }
+
+            $.ajax({
+                type: "GET",
+                url: "cgi-bin/cfgMgrCgi.cgi",
+                async: false,
+                dataType: "json",
+                data:{
+                    FunctionName:"Function_SystemTimeSet",
+                    CorrectTime:lt
+                },
+                success: function (result) {
+                    if(result.status==0){
+                        timeDiff();
+                        alert("设置成功");
+                    }else{
+                        alert(result.message);
+                    }
+                },
+                error: function (result) {
+					alert("设置成功");
+				}
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <h2 class="tab" mark="vlan_port">用户管理</h2>
+    <div class="npe_txt">
+        <div class="npe_tips">
+            <p><strong mark="note" transtag="illustration:">说明：</strong> </p>
+            <label mark="note_content" transtag="ag_illustration">（1）用户可以修改系统时间，也可以进行时间设置。</label>
+        </div>
+        <p>
+            <h3 mark="User">修改密码</h3>
+        </p>
+    </div>
+    <div class="content">
+        <div>设备时间：<span id="serverTime"></span></div>
+            <div style="margin-top: 15px;">本地时间：<input type="text" id="localTime" readonly="readonly"><div style="display: inline">
+                <input type="checkbox" name="tongbu" id="tongbu" style="vertical-align:middle; margin-top:0;"
+                  onchange="check()">与计算机时间同步
+              </div></div>
+        <div><button onClick="save()" class="blue_button" style="padding: 5px 12px 5px 12px;margin-top: 15px">同步</button></div>
+    </div>
+</body>
+
+</html>

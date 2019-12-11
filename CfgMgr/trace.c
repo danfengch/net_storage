@@ -259,11 +259,13 @@ void trace(int logLevel, int typ, const char *fmt, ...)
 {
     va_list ap;
     logSignificance sgnfcc;
+    time_t timeNow = time(NULL);
 
     va_start(ap, fmt);
     vsnprintf(lastCfgMgrErr, LOG_BUF_LEN_MAX, fmt, ap);
     va_end(ap);
 
+    printf("[ %s ] ", time2format2(timeNow));
     printf(lastCfgMgrErr);
     printf("\n");
 

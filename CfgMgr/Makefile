@@ -1,6 +1,6 @@
 include ./config.mk
 
-CFGMGR_OBJS = web.o cfgMgr.o message.o trace.o ping.o share.o aid.o fpgaRemoteUpdate.o
+CFGMGR_OBJS = web.o cfgMgr.o message.o trace.o ping.o share.o aid.o fpgaRemoteUpdate.o fpgaCtrl.o
 MQTEST_OBJS = message.o trace.o ping.o share.o aid.o mq_test.o
 
 all: CfgMgr

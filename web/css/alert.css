@@ -1,0 +1,60 @@
+/*************** Notifications ***************/
+.notificationdiv {
+	position: absolute;
+	left:0;
+	top: 0;
+	width:100%;
+}
+.notification {
+	position: relative;
+	margin: 0 0 auto 0;
+	padding: 0;
+	border: 1px solid;
+	font-size: 15px;
+}
+.attention {
+	background: #fffbcc;
+	border-color: #e6db55;
+	color: #666452;
+}
+.information {
+	background: #dbe3ff;
+	border-color: #a2b4ee;
+	color: #585b66;
+}
+.success {
+	background: #d5ffce;
+	border-color: #9adf8f;
+	color: #556652;
+}
+.error {
+	background: #ffcece;
+	border-color: #df8f8f;
+	color: #665252;
+}
+.notification div {
+	display:block;
+	font-style:normal;
+	padding: 10px 10px 10px 36px;
+	line-height: 1.5em;
+}
+.notification .close {
+	cursor:pointer;
+	color:#990000;
+	padding:0;
+	line-height: 1em;
+	position:absolute;
+	right:5px;
+	top:5px;
+}
+.notification .close img {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	outline: 0;
+	font-weight: inherit;
+	font-style: inherit;
+	font-size: 100%;
+	font-family: inherit;
+	vertical-align: baseline;
+}

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>系统日志</title>
+    <link rel="stylesheet" href="./css/validate_style.css" type="text/css" media="all" />
+    <link rel="stylesheet" href="./css/bootstrap.min.css" type="text/css" />
+    <link rel="stylesheet" href="./css/dataTables.bootstrap.min.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="css/switch.css">
+    <script src="./js/jquery-1.11.3.min.js"></script>
+    <script src="./js/jquery.dataTables.min.js"></script>
+    <script src="./js/dataTables.bootstrap.min.js"></script>
+    <script src="./js/jquery.form.js"></script>
+    <script src="./js/Validform_v5.3.2_min.js"></script>
+    <script src="./js/Validform_Datatype.js"></script>
+    <script src="./js/jquery.cookie.js"></script>
+    <script src="./js/login.js"></script>
+    <script src="./js/uarm_date.js"></script>
+    <script src="./plugin/laydate/laydate.js"></script>
+    <script src="./plugin/layer/layer.js"></script>
+
+    <style type="text/css">
+        .content {
+            margin-left: 50px;
+            margin-top: 10px;
+        }
+        .layui-laydate-main {
+            width: 220px;
+        }
+        .layui-laydate-content td,
+        .layui-laydate-content th {
+            width: 27px;
+        }
+        .myspan {
+            display: inline-block;
+            width: 80px;
+            text-align: right;
+        }
+    </style>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+
+            laydate.render({
+                elem: '#startTime'
+                , type: 'datetime'
+            });
+            laydate.render({
+                elem: '#endTime'
+                , type: 'datetime'
+            });
+            check_login_status();
+            var st = $.cookie('file_query_startTime');
+            if (st == null) {
+                st = new Date().format("yyyy-MM-dd 00:00:00")
+            }
+
+            var et = $.cookie('file_query_endTime');
+            if (et == null) {
+                et = new Date().format("yyyy-MM-dd hh:mm:ss");
+            }
+            $("#startTime").val(st);
+            $("#endTime").val(et);
+            dt=$('#example').DataTable({
+                "paging": true,
+                "bLengthChange": false,
+                "ordering": false,
+                "info": true,
+                "searching": false,
+                "serverSide": true,
+                "oLanguage": {
+                    "sLengthMenu": "每页显示 _MENU_ 条记录",
+                    "sZeroRecords": "抱歉， 没有找到",
+                    "sInfo": "从 _START_ 到 _END_ /共 _TOTAL_ 条数据",
+                    "sInfoEmpty": "空空如也",
+                    "sInfoFiltered": "(从 _MAX_ 条数据中检索)",
+                    "oPaginate": {
+                        "sFirst": "首页",
+                        "sPrevious": "上一页",
+                        "sNext": "下一页",
+                        "sLast": "尾页"
+                    }
+                },
+                "ajax": {
+                    "url": "/cgi-bin/cfgMgrCgi.cgi",
+                    "type": "post",
+                    "data": {
+                        "FunctionName": "Function_LogLookUp",
+                        "LogType": $("#LogType").val(),
+                        "Significance": $("#Significance").val(),
+                        "StartTime": st,
+                        "EndTime": et
+                    }
+                },
+                "columns": [
+                    {
+                        "sClass": "text-center",
+                        "data": "LogType"
+                    }
+                    , {
+                        "sClass": "text-center",
+                        "data": "LogTime"
+                    }, {
+                        "sClass": "text-center",
+                        "data": "LogType"
+                    }, {
+                        "sClass": "text-center",
+                        "data": "Significance"
+                        // "render": function (data, type, full, meta) {
+                        //     return data + 'MB';
+                        // }
+                    }, {
+                        // "sClass": "text-center",
+                        "data": "content"
+                    }
+                ],
+
+                "drawCallback": function () { // 序號列
+                    var api = this.api();
+                    var startIndex = api.context[0]._iDisplayStart; // 獲取本頁開始的條數
+                    api.column(0).nodes().each(function (cell, i) {
+                        cell.innerHTML = startIndex + i + 1;
+                    });
+                }
+
+            });
+
+
+            $("#search").click(function(){
+                var st = $("#startTime").val();
+                var et = $("#endTime").val();
+                if (st == "" || et == "") {
+                    alert("请选择日期");
+                    return false;
+                }
+                $.cookie('file_query_startTime', st);
+                $.cookie('file_query_endTime', et);
+                var param ={
+                    "FunctionName": "Function_LogLookUp",
+                    "LogType": $("#LogType").val(),
+                    "Significance": $("#Significance").val(),
+                    "StartTime": st,
+                    "EndTime": et
+                };
+                dt.settings()[0].ajax.data = param;
+                dt.ajax.reload();
+            });
+
+
+            $("#clearAll").click(function(){
+                if (!confirm("此操作将清除系统所有日志，不可恢复")) {
+                   return false;
+                }
+
+                $.ajax({
+                    type: "GET",
+                    url: "cgi-bin/cfgMgrCgi.cgi",
+                    async: false,
+                    dataType: "json",
+                    data: {
+                        FunctionName: "Function_LogClearAll",
+                        times:new Date().getTime()
+                    },
+                    success: function (result) {
+                        if(result.status==0){
+                            dt.ajax.reload();
+                        }else {
+                            alert(result.message);
+                        }
+                    },
+                    error: function (result) {
+                        alert(result.message);
+                    }
+                });
+            });
+
+
+            $("#download").click(function(){
+                var st = $("#startTime").val();
+                var et = $("#endTime").val();
+                if (st == "" || et == "") {
+                    alert("请选择日期");
+                    return false;
+                }
+
+                $.ajax({
+                    type: "GET",
+                    url: "cgi-bin/cfgMgrCgi.cgi",
+                    async: false,
+                    dataType: "json",
+                    data: {
+                        FunctionName: "Function_LogExport",
+                        LogType: $("#LogType").val(),
+                        Significance: $("#Significance").val(),
+                        StartTime: st,
+                        EndTime: et
+                    },
+                    success: function (result) {
+                        var url=result.url;
+                        if(url!=null){
+                            downloadFile(url.substring(url.lastIndexOf("/") + 1, url.length),url);
+                        }else{
+                            alert("获取不到文件地址");
+                        }
+                    },
+                    error: function (result) {
+                        alert(result.message);
+                    }
+                });
+
+            });
+
+
+            
+        //文件夹选择器（只支持IE）
+        function browseFolder() {
+            try {
+                var Message = "\u8bf7\u9009\u62e9\u6587\u4ef6\u5939"; //选择框提示信息
+                var Shell = new ActiveXObject("Shell.Application");
+                var Folder = Shell.BrowseForFolder(0, Message, 64, 17); //起始目录为：我的电脑
+                //var Folder = Shell.BrowseForFolder(0, Message, 0); //起始目录为：桌面
+                if (Folder != null) {
+                    Folder = Folder.items(); // 返回 FolderItems 对象
+                    Folder = Folder.item(); // 返回 Folderitem 对象
+                    Folder = Folder.Path; // 返回路径
+                    if (Folder.charAt(Folder.length - 1) != "\\") {
+                        Folder = Folder + "\\";
+                    }
+                    return Folder;
+                }
+            }
+            catch (e) {
+                alert(e.message);
+            }
+        }
+
+            function downloadFile(name,url){
+                if (window.ActiveXObject || "ActiveXObject" in window){
+                    var ll=browseFolder();
+                    var tipsID=layer.msg('下载中，请勿关闭页面', {
+                        icon: 16
+                        , shade: 0.01,
+                        time:false //取消自动关闭
+                    });
+                    $.when(downloadWithADODB(ll+name,url)).done(function (ret) {
+                        // layer.closeAll('loading');
+                        layer.close(tipsID);
+                        if(ret==""){
+                            alert("下载完成,路径："+ll+name);
+                        }
+                    });
+                }else{
+                    var a = document.createElement("a"), //创建a标签
+                        e = document.createEvent("MouseEvents"); //创建鼠标事件对象
+                    e.initEvent("click", false, false); //初始化事件对象
+                    a.href = url; //设置下载地址
+                    a.download = name; //设置下载文件名
+                    a.dispatchEvent(e); //给指定的元素，执行事件click事件
+                }
+            }
+
+            function downloadWithADODB(strLocalURL,strRemoteURL) {
+            var defer= $.Deferred();
+            try {
+                var xmlHTTP = new ActiveXObject("Microsoft.XMLHTTP");
+                xmlHTTP.open("Get", strRemoteURL, true);
+                xmlHTTP.setRequestHeader('If-Modified-Since', '0');
+                xmlHTTP.send();
+                xmlHTTP.onreadystatechange = function(){
+                    if(xmlHTTP.readyState == 4){
+                        if(xmlHTTP.status == 200){
+                            var adodbStream = new ActiveXObject("ADODB.Stream");
+                            adodbStream.Type = 1;//1=adTypeBinary
+                            adodbStream.Open();
+                            adodbStream.write(xmlHTTP.responseBody);
+                            adodbStream.SaveToFile(strLocalURL, 2);
+                            adodbStream.Close();
+                            adodbStream = null;
+                            xmlHTTP = null;
+                            defer.resolve("");
+                        }else{
+                            defer.resolve("404");
+                            alert("出现错误，状态码："+xmlHTTP.status);
+                        }
+                    }
+                }
+            }
+            catch (e) {
+                defer.resolve("");
+                alert(e.message);
+            }
+            return defer;
+        }
+
+
+        });
+    </script>
+</head>
+
+<body>
+    <h2 class="tab" mark="vlan_port">系统维护</h2>
+    <div class="npe_txt">
+        <div class="npe_tips">
+            <p><strong mark="note" transtag="illustration:">说明：</strong> </p>
+            <label mark="note_content" transtag="ag_illustration"> </label>（1）日志记录了系统事件与用户事件，主要用于操作分析与诊断；<br />
+                （2）清空日志”将清空设备上的日志文件内容，且不可恢复； <br />
+                （3）注意：不支持中文日志内容的显示！
+        </div>
+        <p>
+            <h3 mark="User">系统日志</h3>
+        </p>
+    </div>
+    <div class="content" style="margin:5px; padding:0px;width:90%">
+        <div>
+            <div style="width: 40%;display:inline-block;">
+                <span class="myspan">类型：</span><select class="shortselect" id="LogType">
+                    <option value="all">所有</option>
+                    <option value="user">用户</option>
+                    <option value="system">系统</option>
+                </select>
+            </div>
+            <div style="width: 50%;display: inline-block;">
+                <span class="myspan">重要性：</span><select class="shortselect" id="Significance">
+                    <option value="all">所有</option>
+                    <option value="general">一般</option>
+                    <option value="key">关键</option>
+                </select>
+                <button class="blue_button" style="padding: 3px 12px 3px 12px;margin-left: 10px;" id="search">查找</button>
+                <button class="blue_button" style="padding: 3px 12px 3px 12px;margin-left: 10px;" id="clearAll">清除所有日志</button>
+            </div>
+        </div>
+        <div style="margin-top: 12px">
+            <div style="width: 40%;display:inline-block;"><span class="myspan">开始时间：</span><input type="text"
+                    id="startTime" readonly="readonly" style="height:20px;width:177px;">
+            </div>
+            <div style="width: 40%;display:inline-block;"><span class="myspan">结束时间：</span><input type="text"
+                    id="endTime" readonly="readonly" style="height:20px;width:177px;"><button id="download" class="blue_button"
+                    style="padding: 3px 12px 3px 12px;margin-left: 15px">导出</button>
+            </div>
+        </div>
+        <div style="margin-top: 12px">
+            <table id="example" class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>时间</th>
+                        <th>类型</th>
+                        <th>重要性</th>
+                        <th>内容</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+</body>
+
+</html>

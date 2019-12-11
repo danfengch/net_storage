@@ -89,4 +89,6 @@ typedef enum
 
 extern int fpgaRmtUdt (char *fileName);
 
+extern int fpgaGetVersion (void);
+
 #endif /*__FPGA_REMOTE_UPDATE_H__*/
