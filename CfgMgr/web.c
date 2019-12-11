@@ -41,8 +41,8 @@
 #include <share.h>
 #include <aid.h>
 #include <sys/types.h>
-#include <dirent.h>
 #include <fpgaRemoteUpdate.h>
+#include <fpgaCtrl.h>
 
 
 #define ETHER_ADDR_LEN    6
@@ -1137,141 +1137,6 @@ doNetCaptureExit:
     return status;
 }
 
-/*
-1.功能编码
-    Gpio18	Gpio0	Gpio1	Gpio2	说明
-    0	0	0	0	通道0 不更新（给陈伦）
-        0	0	1	通道0 10M
-        0	1	0	通道0 更新（给陈伦）
-        0	1	1	通道0 100M
-        1	0	0	无
-        1	0	1	通道0 1000M
-        1	1	1	打开过滤
-        1	1	0	关闭过滤
-    1	0	0	0	通道1 不更新（给陈伦）
-        0	0	1	通道1  10M
-        0	1	0	通道1 更新（给陈伦）
-        0	1	1	通道1  100M
-        1	0	0	无
-        1	0	1	通道1  1000M
-        1	1	1	打开过滤
-        1	1	0	关闭过滤
-2.使能管脚
-    gpio19 作为使能信号使用，高电平有效
-*/
-static const int opCode[][4] = {
-    {0, 0, 0, 0},
-    {0, 0, 0, 1},
-    {0, 0, 1, 0},
-    {0, 0, 1, 1},
-    {0, 1, 0, 0},
-    {0, 1, 0, 1},
-    {0, 1, 1, 1},
-    {0, 1, 1, 0},
-    {1, 0, 0, 0},
-    {1, 0, 0, 1},
-    {1, 0, 1, 0},
-    {1, 0, 1, 1},
-    {1, 1, 0, 0},
-    {1, 1, 0, 1},
-    {1, 1, 1, 1},
-    {1, 1, 1, 0},
-};
-
-typedef enum
-{
-    OPCODE_NET0_FPGA_UPDATE_OFF = 0,
-    OPCODE_NET0_SPEED_10M,
-    OPCODE_NET0_FPGA_UPDATE_ON,
-    OPCODE_NET0_SPEED_100M,
-    OPCODE_NET0_NONE,
-    OPCODE_NET0_SPEED_1000M,
-    OPCODE_NET0_FILTER_ON,
-    OPCODE_NET0_FILTER_OFF,
-    OPCODE_NET1_FPGA_UPDATE_OFF,
-    OPCODE_NET1_SPEED_10M,
-    OPCODE_NET1_FPGA_UPDATE_ON,
-    OPCODE_NET1_SPEED_100M,
-    OPCODE_NET1_NONE,
-    OPCODE_NET1_SPEED_1000M,
-    OPCODE_NET1_FILTER_ON,
-    OPCODE_NET1_FILTER_OFF
-}fpgaOperateCode;
-
-static void fgpaCtrlInit(void)
-{
-    DIR *dir;
-
-    if (NULL == (dir = opendir("/sys/class/gpio/gpio19")))
-    {
-        system("echo 19 > /sys/class/gpio/export");
-        system("echo \"out\" > /sys/class/gpio/gpio19/direction");    
-    }
-    else
-    {
-        closedir(dir);
-    }
-    system("echo 0 > /sys/class/gpio/gpio19/value");
-
-    if (NULL == (dir = opendir("/sys/class/gpio/gpio0")))
-    {
-        system("echo 0 > /sys/class/gpio/export");
-        system("echo \"out\" > /sys/class/gpio/gpio0/direction");
-    }
-    else
-    {
-        closedir(dir);
-    }
-
-    if (NULL == (dir = opendir("/sys/class/gpio/gpio1")))
-    {
-        system("echo 1 > /sys/class/gpio/export");
-        system("echo \"out\" > /sys/class/gpio/gpio1/direction");
-    }
-    else
-    {
-        closedir(dir);
-    }
-
-    if (NULL == (dir = opendir("/sys/class/gpio/gpio2")))
-    {
-        system("echo 2 > /sys/class/gpio/export");
-        system("echo \"out\" > /sys/class/gpio/gpio2/direction");
-    }
-    else
-    {
-        closedir(dir);
-    }
-
-    if (NULL == (dir = opendir("/sys/class/gpio/gpio18")))
-    {
-        system("echo 18 > /sys/class/gpio/export");
-        system("echo \"out\" > /sys/class/gpio/gpio18/direction");    
-    }
-    else
-    {
-        closedir(dir);
-    }
-}
-
-static void fpgaCtrl (fpgaOperateCode code)
-{
-    char cmd[50];
-    
-    system("echo 0 > /sys/class/gpio/gpio19/value");
-    snprintf(cmd, sizeof(cmd), "echo %d > /sys/class/gpio/gpio18/value", opCode[code][0]);
-    system(cmd);
-    snprintf(cmd, sizeof(cmd), "echo %d > /sys/class/gpio/gpio0/value", opCode[code][1]);
-    system(cmd);
-    snprintf(cmd, sizeof(cmd), "echo %d > /sys/class/gpio/gpio1/value", opCode[code][2]);
-    system(cmd);
-    snprintf(cmd, sizeof(cmd), "echo %d > /sys/class/gpio/gpio2/value", opCode[code][3]);
-    system(cmd);
-    system("echo 1 > /sys/class/gpio/gpio19/value");
-    usleep(1000);
-    system("echo 0 > /sys/class/gpio/gpio19/value");
-}
-
 static cfgMgrStatus netFilter(filterParam *filter, int netNumber)
 {
     cfgMgrStatus     status = CFGMGR_ERR;    
@@ -1552,14 +1417,6 @@ static cfgMgrStatus doAdminPasswdConfirm(msg *in, msg *out)
     return status;
 }
 
-
-static int logicVersionGet (void)
-{
-    int ver = 0x1000000;
-
-    return ver;
-}
-
 static cfgMgrStatus doVersionGet(msg *in, msg *out)
 {
     cfgMgrStatus status = CFGMGR_OK;
@@ -1571,8 +1428,8 @@ static cfgMgrStatus doVersionGet(msg *in, msg *out)
     memset (out, 0, sizeof(msg));
 
     snprintf(resp->cfgMgrVersion, sizeof(resp->cfgMgrVersion), "V%d.%d", CFGMGR_MAJOR ,CFGMGR_MINOR);
-    logicVersion = logicVersionGet();
-    snprintf(resp->logicVersion, sizeof(resp->logicVersion), "V%d.%d", logicVersion>>24, logicVersion>>16 & 0xff);    
+    logicVersion = fpgaGetVersion();
+    snprintf(resp->logicVersion, sizeof(resp->logicVersion), "%d", logicVersion);    
     
     out->type = MSGTYPE_GETVERSION_RESPONSE;
     
@@ -1987,18 +1844,12 @@ static cfgMgrStatus doUpdateLogicFile(msg *in, msg *out)
 
     trace(DEBUG_INFO, USER, "UpdateLogicFile start");
 
-    system("arp -i eth0 -s 192.168.0.2 00:0a:35:01:fe:c0");
-
-    fpgaCtrl (OPCODE_NET0_FPGA_UPDATE_ON);
-
     if (0 != fpgaRmtUdt(FPGA_UPDATE_FILE_NAME))
     {
         trace(DEBUG_INFO, USER, "Update logic config file failed");
         status = CFGMGR_ERR;
         goto doUpdateLogicFileExit;
     }
-
-    fpgaCtrl (OPCODE_NET0_FPGA_UPDATE_OFF);
 
     system("sync");
 
@@ -2134,8 +1985,8 @@ static int webProcess (void)
             goto webProcessExit;
         }
     }
+    
     /** net filter */
-    fgpaCtrlInit();
     if (CFGMGR_OK != netFilter(&pa.lan1.filter, 1))
     {
         trace(DEBUG_ERR, SYSTEM, "netFilter 1 excute failed !!!");
@@ -2275,9 +2126,11 @@ int webInit (void)
 	int ret;
 	pthread_attr_t attr;
 
-    system("dumpcap -i eth0 -w /usr/httproot/NetFiles/eth0 -b filesize:100000 -b files:2100 -t -P -B 256 &");
-    system("dumpcap -i eth1 -w /usr/httproot/NetFiles/eth1 -b filesize:100000 -b files:2100 -t -P -B 256 &");
-	
+    system("dumpcap -i eth0 -w /usr/httproot/NetFiles/eth0 -b filesize:1000000 -b files:110 -P -B 256 &");
+    system("dumpcap -i eth1 -w /usr/httproot/NetFiles/eth1 -b filesize:1000000 -b files:110 -P -B 256 &");
+
+    fpgaCtrlInit();
+    
 	ret = pthread_attr_init(&attr);
 	assert(ret == 0);
 	ret = pthread_attr_setstacksize(&attr, WEB_THREAD_STACK_SIZE);
